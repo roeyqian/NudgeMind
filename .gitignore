@@ -1,0 +1,6 @@
+desktop.ini
+.idea
+wrangler.jsonc
+node_modules
+.wrangler
+dist
