@@ -110,6 +110,9 @@ input:focus, textarea:focus { border-color: #ad3c4b; box-shadow: 0 0 0 3px rgba(
 .product-foot strong { color: #a75336; font-size: 20px; }
 .product-foot s { display: block; margin-top: 2px; color: #a5aaa7; font-size: 11px; }
 .mini-cart { display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 12px; color: #fff; background: var(--red); }
+.pagination { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 34px; color: var(--muted); font-size: 14px; }
+.pagination button { min-width: 82px; border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; color: var(--ink); background: var(--paper); font: inherit; font-weight: 700; }
+.pagination button:disabled { cursor: not-allowed; opacity: .42; }
 .state-card, .empty-state { min-height: 280px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 13px; border: 1px dashed #cbc8bd; border-radius: 18px; color: var(--muted); background: rgba(255,255,255,.45); }
 .empty-state h2 { margin: 5px 0 0; color: var(--ink); font-size: 30px; }
 .empty-state p { margin-bottom: 10px; }
@@ -340,8 +343,7 @@ input:focus, textarea:focus { border-color: #ad3c4b; box-shadow: 0 0 0 3px rgba(
 @media (max-width: 430px) {
   .catalog-tools { align-items: stretch; flex-direction: column; }
   .sort-box { flex-basis: auto; }
-  .product-grid { grid-template-columns: 1fr; }
-  .product-body > p { display: block; }
+  .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ai-buttons { grid-template-columns: 1fr; }
   .spec-panel dl { grid-template-columns: 105px 1fr; }
   .cart-item { grid-template-columns: 70px 1fr; }

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -51,6 +51,9 @@ const searchText = ref('');
 const productSort = ref('default');
 const selectedProduct = ref(null);
 const catalogBusy = ref(false);
+const catalogPage = ref(1);
+const productTotal = ref(0);
+const PRODUCTS_PER_PAGE = 20;
 
 const cart = ref([]);
 const cartBusy = ref(false);
@@ -101,37 +104,16 @@ function toggleLocale() {
   applyLocale();
 }
 
-const filteredProducts = computed(() => {
-  const keyword = searchText.value.trim().toLowerCase();
-  const matchingProducts = products.value.filter((product) => {
-    const categoryMatches = selectedCategory.value === 'all' || product.category_id === selectedCategory.value;
-    const textMatches = !keyword || [product.name, product.subtitle, product.description, ...(product.tags || [])]
-      .join(' ')
-      .toLowerCase()
-      .includes(keyword);
-    return categoryMatches && textMatches;
-  });
-
-  if (productSort.value === 'default') return matchingProducts;
-
-  return [...matchingProducts].sort((left, right) => {
-    if (productSort.value === 'name') return compareProductsByName(left, right);
-
-    const priceDifference = Number(left.price) - Number(right.price);
-    const direction = productSort.value === 'price-desc' ? -1 : 1;
-    return priceDifference === 0 ? compareProductsByName(left, right) : priceDifference * direction;
-  });
-});
+const totalProductPages = computed(() => Math.max(1, Math.ceil(productTotal.value / PRODUCTS_PER_PAGE)));
+const paginationText = computed(() => locale.value === 'en'
+  ? { label: 'Product pagination', previous: 'Previous page', next: 'Next page' }
+  : { label: '商品分页', previous: '上一页', next: '下一页' });
 
 const cartCount = computed(() => cart.value.reduce((sum, item) => sum + Number(item.quantity), 0));
 const cartTotal = computed(() => cart.value.reduce((sum, item) => sum + Number(item.price) * Number(item.quantity), 0));
 
 function money(value) {
   return Number(value || 0).toLocaleString(locale.value === 'en' ? 'en-US' : 'zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function compareProductsByName(left, right) {
-  return left.name.localeCompare(right.name, locale.value === 'en' ? 'en' : 'zh-Hans-CN-u-co-pinyin', { numeric: true, sensitivity: 'base' }) || String(left.id).localeCompare(String(right.id));
 }
 
 function toggleTheme() {
@@ -183,6 +165,8 @@ function resetSession() {
   session.clear();
   user.value = null;
   products.value = [];
+  productTotal.value = 0;
+  catalogPage.value = 1;
   categories.value = [];
   cart.value = [];
   orders.value = [];
@@ -194,20 +178,52 @@ function resetSession() {
 async function loadInitialData() {
   catalogBusy.value = true;
   try {
-    const [productData, categoryData, cartData] = await Promise.all([
-      ProductAPI.list({ limit: 100 }),
+    const [categoryData, cartData] = await Promise.all([
       ProductAPI.categories(),
       CartAPI.get(),
     ]);
-    products.value = localizeItems(productData.products);
     categories.value = localizeCategories(categoryData.categories);
     cart.value = localizeItems(cartData.items);
+    await loadProducts();
   } catch (error) {
     notify(error.message, 'error');
   } finally {
     catalogBusy.value = false;
   }
 }
+
+async function loadProducts() {
+  catalogBusy.value = true;
+  try {
+    const productData = await ProductAPI.list({
+      limit: PRODUCTS_PER_PAGE,
+      offset: (catalogPage.value - 1) * PRODUCTS_PER_PAGE,
+      ...(selectedCategory.value !== 'all' ? { category: selectedCategory.value } : {}),
+      ...(searchText.value.trim() ? { search: searchText.value.trim() } : {}),
+      ...(productSort.value !== 'default' ? { sort: productSort.value } : {}),
+    });
+    products.value = localizeItems(productData.products);
+    productTotal.value = Number(productData.total || 0);
+  } catch (error) {
+    products.value = [];
+    productTotal.value = 0;
+    notify(error.message, 'error');
+  } finally {
+    catalogBusy.value = false;
+  }
+}
+
+function changeCatalogPage(nextPage) {
+  if (nextPage < 1 || nextPage > totalProductPages.value || nextPage === catalogPage.value) return;
+  catalogPage.value = nextPage;
+  loadProducts();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+watch([selectedCategory, searchText, productSort], () => {
+  catalogPage.value = 1;
+  if (user.value) loadProducts();
+});
 
 async function openProduct(product) {
   catalogBusy.value = true;
@@ -495,9 +511,9 @@ onUnmounted(() => {
         </div>
 
         <div v-if="catalogBusy" class="state-card"><LoaderCircle class="spin" />{{ t('loadingProducts') }}</div>
-        <div v-else-if="!filteredProducts.length" class="state-card"><Package />{{ t('noProducts') }}</div>
+        <div v-else-if="!products.length" class="state-card"><Package />{{ t('noProducts') }}</div>
         <div v-else class="product-grid">
-          <article v-for="product in filteredProducts" :key="product.id" class="product-card" @click="openProduct(product)">
+          <article v-for="product in products" :key="product.id" class="product-card" @click="openProduct(product)">
             <div class="product-image-wrap">
               <img :src="product.image_url" :alt="product.name" />
               <span v-if="product.is_new" class="product-badge">{{ t('new') }}</span>
@@ -513,6 +529,11 @@ onUnmounted(() => {
             </div>
           </article>
         </div>
+        <nav v-if="!catalogBusy && productTotal > PRODUCTS_PER_PAGE" class="pagination" :aria-label="paginationText.label">
+          <button :disabled="catalogPage === 1" :aria-label="paginationText.previous" @click="changeCatalogPage(catalogPage - 1)">{{ paginationText.previous }}</button>
+          <span>{{ catalogPage }} / {{ totalProductPages }}</span>
+          <button :disabled="catalogPage === totalProductPages" :aria-label="paginationText.next" @click="changeCatalogPage(catalogPage + 1)">{{ paginationText.next }}</button>
+        </nav>
       </section>
     </template>
 

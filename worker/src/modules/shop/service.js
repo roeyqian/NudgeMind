@@ -3,6 +3,7 @@ import { json } from '../../app/http.js';
 export async function getProducts({ env, url }) {
   const category = String(url.searchParams.get('category') || '').trim();
   const search = String(url.searchParams.get('search') || '').trim();
+  const sort = String(url.searchParams.get('sort') || 'default').trim();
   const limit = clampInteger(url.searchParams.get('limit'), 24, 1, 100);
   const offset = clampInteger(url.searchParams.get('offset'), 0, 0, 10_000);
   const clauses = ['1 = 1'];
@@ -18,12 +19,13 @@ export async function getProducts({ env, url }) {
   }
 
   const where = clauses.join(' AND ');
+  const orderBy = productOrder(sort);
   const count = await env.nudge_mind_db.prepare(`SELECT COUNT(*) AS total FROM products p WHERE ${where}`).bind(...bindings).first();
   const { results } = await env.nudge_mind_db.prepare(`
     SELECT p.*, c.name AS category_name
     FROM products p JOIN categories c ON c.id = p.category_id
     WHERE ${where}
-    ORDER BY p.is_hot DESC, p.sales_count DESC, p.created_at DESC
+    ORDER BY ${orderBy}
     LIMIT ? OFFSET ?
   `).bind(...bindings, limit, offset).all();
 
@@ -32,6 +34,14 @@ export async function getProducts({ env, url }) {
     total: Number(count?.total || 0),
     pageInfo: { limit, offset, hasMore: offset + results.length < Number(count?.total || 0) },
   });
+}
+
+function productOrder(sort) {
+  return {
+    name: 'p.name COLLATE NOCASE ASC, p.id ASC',
+    'price-asc': 'p.price ASC, p.name COLLATE NOCASE ASC, p.id ASC',
+    'price-desc': 'p.price DESC, p.name COLLATE NOCASE ASC, p.id ASC',
+  }[sort] || 'p.is_hot DESC, p.sales_count DESC, p.created_at DESC';
 }
 
 export async function getProduct({ env, params }) {
@@ -123,10 +133,55 @@ const productImageTranslations = {
   prod_013: { name: 'Medium-Roast Drip Coffee', label: 'COFFEE' },
   prod_014: { name: 'Daily Mixed Nuts, 30 Packs', label: 'NUTS' },
   prod_015: { name: '72% Dark Chocolate Set', label: 'DARK' },
+  prod_016: { name: 'Portable Reading Tablet 11', label: 'TABLET' },
+  prod_017: { name: 'Portable Bluetooth Speaker', label: 'SOUND' },
+  prod_018: { name: '87-Key Mechanical Keyboard', label: 'KEYS' },
+  prod_019: { name: 'Dual-Port GaN Charger', label: 'CHARGE' },
+  prod_020: { name: 'Ergonomic Wireless Mouse', label: 'MOUSE' },
+  prod_021: { name: '4K Web Camera', label: 'CAM' },
+  prod_022: { name: 'Travel Portable SSD', label: 'SSD' },
+  prod_023: { name: 'Smart Home Display Hub', label: 'HUB' },
+  prod_024: { name: 'Mini Projector', label: 'VIEW' },
+  prod_025: { name: 'Lightweight Sun Jacket', label: 'SUN' },
+  prod_026: { name: 'Wool-Blend Knit Cardigan', label: 'KNIT' },
+  prod_027: { name: 'Lightweight Sports Sling Bag', label: 'SLING' },
+  prod_028: { name: 'Minimal Leather Loafers', label: 'LOAFER' },
+  prod_029: { name: 'Cotton Essential T-Shirt Set', label: 'TEE' },
+  prod_030: { name: 'Water-Repellent City Backpack', label: 'PACK' },
+  prod_031: { name: 'Quick-Dry Sport Shorts', label: 'SHORTS' },
+  prod_032: { name: 'Foldable Bucket Hat', label: 'HAT' },
+  prod_033: { name: 'Wool-Blend Scarf', label: 'SCARF' },
+  prod_034: { name: 'Multi-Tier Storage Cart', label: 'STORE' },
+  prod_035: { name: 'Ergonomic Office Chair', label: 'CHAIR' },
+  prod_036: { name: 'Natural Latex Pillow', label: 'SLEEP' },
+  prod_037: { name: 'Smart Sensor Desk Lamp', label: 'LAMP' },
+  prod_038: { name: 'Aroma Humidifier', label: 'MIST' },
+  prod_039: { name: 'Foldable Drying Rack', label: 'DRY' },
+  prod_040: { name: 'Enameled Cast-Iron Dutch Oven', label: 'COOK' },
+  prod_041: { name: 'Automatic Curtain Motor', label: 'CURTAIN' },
+  prod_042: { name: 'Cotton-Linen Bedding Set', label: 'BED' },
+  prod_043: { name: 'Amino Acid Cleansing Mousse', label: 'CLEAN' },
+  prod_044: { name: 'Repairing Hydration Serum', label: 'SERUM' },
+  prod_045: { name: 'Velvet Matte Lipstick', label: 'LIP' },
+  prod_046: { name: 'Electric Facial Cleansing Device', label: 'GLOW' },
+  prod_047: { name: 'Heated Eye Massager', label: 'EYE' },
+  prod_048: { name: 'Botanical Scented Shower Oil', label: 'BATH' },
+  prod_049: { name: 'Volumizing Dry Shampoo Spray', label: 'VOLUME' },
+  prod_050: { name: 'Portable Nine-Shade Eye Palette', label: 'EYES' },
+  prod_051: { name: 'Soothing Body Lotion', label: 'BODY' },
+  prod_052: { name: 'Low-Sugar Oat Granola', label: 'OATS' },
+  prod_053: { name: 'Freeze-Dried Strawberry Yogurt Bites', label: 'BERRY' },
+  prod_054: { name: 'Cold-Brew Tea Bag Set', label: 'TEA' },
+  prod_055: { name: 'Extra Virgin Olive Oil', label: 'OIL' },
+  prod_056: { name: 'Light-Roast Loose-Leaf Tea Gift Set', label: 'TEA' },
+  prod_057: { name: 'High-Protein Beef Jerky', label: 'BEEF' },
+  prod_058: { name: 'Handmade Butter Cookie Gift Tin', label: 'COOKIE' },
+  prod_059: { name: 'Zero-Sugar Sparkling Water, 12 Cans', label: 'FIZZ' },
+  prod_060: { name: 'Mixed-Grain Porridge Rice Set', label: 'GRAIN' },
 };
 
 function productImageUrl(productId) {
-  return `/api/products/${encodeURIComponent(productId)}/image?v=icon-label-v2`;
+  return `/api/products/${encodeURIComponent(productId)}/image?v=icon-label-v3`;
 }
 
 function escapeXml(value) {
