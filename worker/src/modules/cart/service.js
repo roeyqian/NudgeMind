@@ -7,7 +7,7 @@ export async function getCart({ request, env }) {
     FROM cart_items ci JOIN products p ON p.id = ci.product_id
     WHERE ci.user_id = ? ORDER BY ci.added_at DESC
   `).bind(user.userId).all();
-  const items = results.map((item) => ({ ...item, image_url: `/api/products/${encodeURIComponent(item.product_id)}/image` }));
+  const items = results.map((item) => ({ ...item, image_url: `/api/products/${encodeURIComponent(item.product_id)}/image?v=icon-label-v2` }));
   return json({ items, total: items.reduce((sum, item) => sum + Number(item.price) * Number(item.quantity), 0) });
 }
 

@@ -30,7 +30,7 @@ export async function createOrder({ request, env }) {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         createId('order_item'), orderId, item.product_id, item.name,
-        `/api/products/${encodeURIComponent(item.product_id)}/image`, Number(item.price), Number(item.quantity),
+        `/api/products/${encodeURIComponent(item.product_id)}/image?v=icon-label-v2`, Number(item.price), Number(item.quantity),
         Number(item.price) * Number(item.quantity),
       ),
       env.nudge_mind_db.prepare('UPDATE products SET stock = stock - ?, updated_at = datetime(\'now\') WHERE id = ? AND stock >= ?')

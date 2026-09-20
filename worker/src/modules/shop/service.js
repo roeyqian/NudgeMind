@@ -50,7 +50,7 @@ export async function getCategories({ env }) {
 }
 
 export async function getProductImage({ env, params }) {
-  const product = await env.nudge_mind_db.prepare('SELECT name, category_id FROM products WHERE id = ?').bind(params.id).first();
+  const product = await env.nudge_mind_db.prepare('SELECT name, category_id, tags_json FROM products WHERE id = ?').bind(params.id).first();
   if (!product) throw { status: 404, message: '商品不存在' };
   const palette = {
     cat_digital: ['#b7c9c1', '#24483a'],
@@ -60,23 +60,25 @@ export async function getProductImage({ env, params }) {
     cat_food: ['#e7d2a5', '#674c25'],
   }[product.category_id] || ['#d5d8d0', '#34443d'];
   const name = escapeXml(product.name);
-  const initial = escapeXml(Array.from(product.name || 'N')[0] || 'N');
+  const iconLabel = getProductIconLabel(product);
+  const label = escapeXml(iconLabel);
+  const labelSize = Array.from(iconLabel).length <= 1 ? 210 : Array.from(iconLabel).length <= 2 ? 170 : Array.from(iconLabel).length <= 3 ? 128 : Array.from(iconLabel).length <= 4 ? 98 : 76;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 680" role="img" aria-label="${name}">
     <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${palette[0]}"/><stop offset="1" stop-color="#f5f1e7"/></linearGradient></defs>
     <rect width="800" height="680" fill="url(#g)"/>
     <circle cx="640" cy="110" r="190" fill="none" stroke="${palette[1]}" stroke-opacity=".12" stroke-width="2"/>
     <circle cx="640" cy="110" r="135" fill="none" stroke="${palette[1]}" stroke-opacity=".1" stroke-width="2"/>
     <rect x="205" y="115" width="390" height="390" rx="96" fill="${palette[1]}" opacity=".94"/>
-    <text x="400" y="375" text-anchor="middle" font-family="Georgia,serif" font-size="210" fill="#f8f2e6">${initial}</text>
+    <text x="400" y="350" text-anchor="middle" font-family="Arial,sans-serif" font-size="${labelSize}" font-weight="700" fill="#f8f2e6">${label}</text>
     <text x="400" y="585" text-anchor="middle" font-family="Arial,sans-serif" font-size="28" font-weight="700" fill="${palette[1]}">${name}</text>
   </svg>`;
-  return new Response(svg, { headers: { 'content-type': 'image/svg+xml; charset=utf-8', 'cache-control': 'public, max-age=3600', 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'" } });
+  return new Response(svg, { headers: { 'content-type': 'image/svg+xml; charset=utf-8', 'cache-control': 'no-store', 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'" } });
 }
 
 export function normalizeProduct(product) {
   return {
     ...product,
-    image_url: `/api/products/${encodeURIComponent(product.id)}/image`,
+    image_url: productImageUrl(product.id),
     specs: parseJson(product.specs_json, {}),
     tags: parseJson(product.tags_json, []),
     is_hot: Boolean(product.is_hot),
@@ -91,6 +93,20 @@ function parseJson(value, fallback) {
 function clampInteger(value, fallback, min, max) {
   const number = Number.parseInt(value ?? '', 10);
   return Number.isFinite(number) ? Math.min(max, Math.max(min, number)) : fallback;
+}
+
+function getProductIconLabel(product) {
+  const tags = parseJson(product.tags_json, []);
+  const firstTag = Array.isArray(tags) && tags.find((tag) => typeof tag === 'string' && tag.trim());
+  if (firstTag) return firstTag.trim();
+
+  const name = String(product.name || '').trim();
+  const withoutSpecification = name.replace(/\s+\d+(?:[.\d]*\s*)?(?:袋|盒|片|个|支|ml|g|kg|L|英寸)?\s*$/iu, '');
+  return Array.from(withoutSpecification || name || '商品').slice(-4).join('');
+}
+
+function productImageUrl(productId) {
+  return `/api/products/${encodeURIComponent(productId)}/image?v=icon-label-v2`;
 }
 
 function escapeXml(value) {
