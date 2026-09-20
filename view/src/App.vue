@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   History,
   LoaderCircle,
+  ListFilter,
   LogOut,
   MessageCircle,
   Minus,
@@ -45,6 +46,7 @@ const products = ref([]);
 const categories = ref([]);
 const selectedCategory = ref('all');
 const searchText = ref('');
+const productSort = ref('default');
 const selectedProduct = ref(null);
 const catalogBusy = ref(false);
 
@@ -64,16 +66,27 @@ const aiBusy = ref(false);
 
 const toast = reactive({ show: false, message: '', kind: 'success' });
 let toastTimer;
+const productNameCollator = new Intl.Collator('zh-Hans-CN-u-co-pinyin', { numeric: true, sensitivity: 'base' });
 
 const filteredProducts = computed(() => {
   const keyword = searchText.value.trim().toLowerCase();
-  return products.value.filter((product) => {
+  const matchingProducts = products.value.filter((product) => {
     const categoryMatches = selectedCategory.value === 'all' || product.category_id === selectedCategory.value;
     const textMatches = !keyword || [product.name, product.subtitle, product.description, ...(product.tags || [])]
       .join(' ')
       .toLowerCase()
       .includes(keyword);
     return categoryMatches && textMatches;
+  });
+
+  if (productSort.value === 'default') return matchingProducts;
+
+  return [...matchingProducts].sort((left, right) => {
+    if (productSort.value === 'name') return compareProductsByName(left, right);
+
+    const priceDifference = Number(left.price) - Number(right.price);
+    const direction = productSort.value === 'price-desc' ? -1 : 1;
+    return priceDifference === 0 ? compareProductsByName(left, right) : priceDifference * direction;
   });
 });
 
@@ -82,6 +95,10 @@ const cartTotal = computed(() => cart.value.reduce((sum, item) => sum + Number(i
 
 function money(value) {
   return Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function compareProductsByName(left, right) {
+  return productNameCollator.compare(left.name, right.name) || String(left.id).localeCompare(String(right.id));
 }
 
 function toggleTheme() {
@@ -412,10 +429,22 @@ onUnmounted(() => {
             <p class="eyebrow dark">研究商品库</p>
             <h2>探索全部商品</h2>
           </div>
-          <label class="search-box">
-            <Search :size="19" />
-            <input v-model="searchText" type="search" placeholder="搜索名称、介绍或标签" />
-          </label>
+          <div class="catalog-tools">
+            <label class="search-box">
+              <Search :size="19" />
+              <input v-model="searchText" type="search" placeholder="搜索名称、介绍或标签" />
+            </label>
+            <label class="sort-box">
+              <ListFilter :size="18" aria-hidden="true" />
+              <span class="sr-only">商品排序</span>
+              <select v-model="productSort" aria-label="商品排序">
+                <option value="default">综合排序</option>
+                <option value="name">首字母 A–Z</option>
+                <option value="price-asc">价格从低到高</option>
+                <option value="price-desc">价格从高到低</option>
+              </select>
+            </label>
+          </div>
         </div>
 
         <div class="category-row">
