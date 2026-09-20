@@ -50,6 +50,8 @@ const selectedCategory = ref('all');
 const searchText = ref('');
 const productSort = ref('default');
 const selectedProduct = ref(null);
+const productDrawerOpen = ref(false);
+const productBusy = ref(false);
 const catalogBusy = ref(false);
 const catalogPage = ref(1);
 const productTotal = ref(0);
@@ -71,6 +73,8 @@ const aiBusy = ref(false);
 
 const toast = reactive({ show: false, message: '', kind: 'success' });
 let toastTimer;
+let lockedPageScroll = null;
+let lockedPageStyles = null;
 
 function t(key, params = {}) {
   return (messages[locale.value][key] || key).replace(/\{(\w+)\}/g, (_, name) => params[name] ?? '');
@@ -179,6 +183,8 @@ function resetSession() {
   cart.value = [];
   orders.value = [];
   selectedProduct.value = null;
+  productDrawerOpen.value = false;
+  productBusy.value = false;
   aiOpen.value = false;
   page.value = 'browse';
 }
@@ -233,17 +239,53 @@ watch([selectedCategory, searchText, productSort], () => {
   if (user.value) loadProducts();
 });
 
+watch(productDrawerOpen, (isOpen) => {
+  if (isOpen) {
+    lockedPageScroll = window.scrollY;
+    lockedPageStyles = {
+      rootOverflow: document.documentElement.style.overflow,
+      rootOverscrollBehavior: document.documentElement.style.overscrollBehavior,
+      bodyOverflow: document.body.style.overflow,
+      bodyPaddingRight: document.body.style.paddingRight,
+    };
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    document.documentElement.style.overflow = 'hidden';
+    document.documentElement.style.overscrollBehavior = 'none';
+    document.body.style.overflow = 'hidden';
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${parseFloat(getComputedStyle(document.body).paddingRight) + scrollbarWidth}px`;
+    }
+    return;
+  }
+
+  if (lockedPageScroll === null) return;
+  document.documentElement.style.overflow = lockedPageStyles.rootOverflow;
+  document.documentElement.style.overscrollBehavior = lockedPageStyles.rootOverscrollBehavior;
+  document.body.style.overflow = lockedPageStyles.bodyOverflow;
+  document.body.style.paddingRight = lockedPageStyles.bodyPaddingRight;
+  window.scrollTo(0, lockedPageScroll);
+  lockedPageScroll = null;
+  lockedPageStyles = null;
+});
+
 async function openProduct(product) {
-  catalogBusy.value = true;
+  selectedProduct.value = null;
+  productDrawerOpen.value = true;
+  productBusy.value = true;
   try {
     selectedProduct.value = localizeCatalogItem((await ProductAPI.detail(product.id)).product, locale.value);
-    page.value = 'detail';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   } catch (error) {
+    productDrawerOpen.value = false;
     notify(error.message, 'error');
   } finally {
-    catalogBusy.value = false;
+    productBusy.value = false;
   }
+}
+
+function closeProductDrawer() {
+  productDrawerOpen.value = false;
+  selectedProduct.value = null;
+  aiOpen.value = false;
 }
 
 async function addToCart(productId, quantity = 1) {
@@ -257,6 +299,7 @@ async function addToCart(productId, quantity = 1) {
 }
 
 async function showCart() {
+  closeProductDrawer();
   page.value = 'cart';
   cartBusy.value = true;
   try {
@@ -305,6 +348,7 @@ async function submitOrder() {
 }
 
 async function showOrders() {
+  closeProductDrawer();
   page.value = 'orders';
   ordersBusy.value = true;
   try {
@@ -358,8 +402,7 @@ async function sendAiMessage() {
 
 function goBrowse() {
   page.value = 'browse';
-  selectedProduct.value = null;
-  aiOpen.value = false;
+  closeProductDrawer();
 }
 
 function handleExpired() {
@@ -378,6 +421,15 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  if (lockedPageScroll !== null) {
+    document.documentElement.style.overflow = lockedPageStyles.rootOverflow;
+    document.documentElement.style.overscrollBehavior = lockedPageStyles.rootOverscrollBehavior;
+    document.body.style.overflow = lockedPageStyles.bodyOverflow;
+    document.body.style.paddingRight = lockedPageStyles.bodyPaddingRight;
+    window.scrollTo(0, lockedPageScroll);
+    lockedPageScroll = null;
+    lockedPageStyles = null;
+  }
   window.removeEventListener(AUTH_EXPIRED_EVENT, handleExpired);
   clearTimeout(toastTimer);
 });
@@ -448,7 +500,7 @@ onUnmounted(() => {
         <span>Nudge Mind</span>
       </button>
       <nav class="main-nav" :aria-label="t('discover')">
-        <button :class="{ active: page === 'browse' || page === 'detail' }" @click="goBrowse">{{ t('discover') }}</button>
+        <button :class="{ active: page === 'browse' }" @click="goBrowse">{{ t('discover') }}</button>
         <button :class="{ active: page === 'orders' }" @click="showOrders"><History :size="17" />{{ t('purchaseHistory') }}</button>
       </nav>
       <div class="top-actions">
@@ -545,48 +597,6 @@ onUnmounted(() => {
       </section>
     </template>
 
-    <main v-else-if="page === 'detail' && selectedProduct" class="page-container detail-page">
-      <button class="back-button" @click="goBrowse"><ArrowLeft :size="18" />{{ t('backToProducts') }}</button>
-      <div class="detail-layout">
-        <section class="detail-visual">
-          <img :src="selectedProduct.image_url" :alt="selectedProduct.name" />
-          <span>{{ t('researchSample') }} · {{ selectedProduct.category_name }}</span>
-        </section>
-        <section class="detail-info">
-          <div class="rating"><Star :size="16" fill="currentColor" /> {{ selectedProduct.rating }} <span>· {{ selectedProduct.sales_count }} {{ t('followers') }}</span></div>
-          <h1>{{ selectedProduct.name }}</h1>
-          <p class="detail-subtitle">{{ selectedProduct.subtitle }}</p>
-          <div class="detail-price"><strong>{{ t('currency') }}{{ money(selectedProduct.price) }}</strong><s v-if="selectedProduct.original_price">{{ t('currency') }}{{ money(selectedProduct.original_price) }}</s></div>
-          <p class="detail-description">{{ selectedProduct.description }}</p>
-
-          <div class="tag-list"><span v-for="tag in selectedProduct.tags" :key="tag">{{ tag }}</span></div>
-
-          <section class="spec-panel">
-            <h2>{{ t('productSpecs') }}</h2>
-            <dl>
-              <template v-for="(value, key) in selectedProduct.specs" :key="key">
-                <dt>{{ key }}</dt><dd>{{ value }}</dd>
-              </template>
-              <dt>{{ t('stock') }}</dt><dd>{{ selectedProduct.stock }} {{ t('pieces') }}</dd>
-            </dl>
-          </section>
-
-          <div class="detail-actions">
-            <button class="primary-button" :disabled="selectedProduct.stock < 1" @click="addToCart(selectedProduct.id)"><ShoppingCart :size="19" />{{ t('addToCart') }}</button>
-          </div>
-
-          <section class="ai-choice">
-            <div><p class="eyebrow dark">{{ t('basicAi') }}</p><h2>{{ t('askWho') }}</h2></div>
-            <div class="ai-buttons">
-              <button class="seller-button" @click="openAi('seller')"><Store :size="20" />{{ t('askSeller') }}</button>
-              <button class="guardian-button" @click="openAi('guardian')"><ShieldCheck :size="20" />{{ t('askGuardian') }}</button>
-            </div>
-            <p>{{ t('aiDescription') }}</p>
-          </section>
-        </section>
-      </div>
-    </main>
-
     <main v-else-if="page === 'cart'" class="page-container">
       <div class="page-heading"><div><p class="eyebrow dark">{{ t('yourChoices') }}</p><h1>{{ t('cart') }}</h1></div><button class="back-button" @click="goBrowse"><ArrowLeft :size="18" />{{ t('continueBrowsing') }}</button></div>
       <div v-if="cartBusy" class="state-card"><LoaderCircle class="spin" />{{ t('loadingCart') }}</div>
@@ -637,6 +647,60 @@ onUnmounted(() => {
         <button class="primary-button full" :disabled="checkoutBusy"><LoaderCircle v-if="checkoutBusy" :size="18" class="spin" />{{ t('confirmPurchase') }}</button>
       </form>
     </div>
+
+    <Transition name="drawer">
+      <div v-if="productDrawerOpen" class="drawer-backdrop" @click.self="closeProductDrawer">
+        <aside class="product-drawer" role="dialog" aria-modal="true" :aria-label="selectedProduct?.name || t('loadingProducts')">
+          <header class="product-drawer-header">
+            <p class="eyebrow dark">{{ t('researchSample') }}</p>
+            <button class="icon-button" type="button" :aria-label="t('close')" :title="t('close')" @click="closeProductDrawer"><X :size="20" /></button>
+          </header>
+          <div v-if="productBusy" class="drawer-loading"><LoaderCircle class="spin" />{{ t('loadingProducts') }}</div>
+          <div v-else-if="selectedProduct" class="product-drawer-content">
+            <div class="detail-layout">
+              <section class="detail-visual">
+                <div class="detail-image">
+                  <img :src="selectedProduct.image_url" :alt="selectedProduct.name" />
+                  <span>{{ t('researchSample') }} · {{ selectedProduct.category_name }}</span>
+                </div>
+                <section class="ai-choice detail-ai-choice">
+                  <div><p class="eyebrow dark">{{ t('basicAi') }}</p><h2>{{ t('askWho') }}</h2></div>
+                  <div class="ai-buttons">
+                    <button class="seller-button" @click="openAi('seller')"><Store :size="20" />{{ t('askSeller') }}</button>
+                    <button class="guardian-button" @click="openAi('guardian')"><ShieldCheck :size="20" />{{ t('askGuardian') }}</button>
+                  </div>
+                  <p>{{ t('aiDescription') }}</p>
+                </section>
+              </section>
+              <section class="detail-info">
+                <div class="rating"><Star :size="16" fill="currentColor" /> {{ selectedProduct.rating }} <span>· {{ selectedProduct.sales_count }} {{ t('followers') }}</span></div>
+                <h1>{{ selectedProduct.name }}</h1>
+                <p class="detail-subtitle">{{ selectedProduct.subtitle }}</p>
+                <div class="detail-price"><strong>{{ t('currency') }}{{ money(selectedProduct.price) }}</strong><s v-if="selectedProduct.original_price">{{ t('currency') }}{{ money(selectedProduct.original_price) }}</s></div>
+                <p class="detail-description">{{ selectedProduct.description }}</p>
+                <div class="tag-list"><span v-for="tag in selectedProduct.tags" :key="tag">{{ tag }}</span></div>
+                <section class="spec-panel">
+                  <h2>{{ t('productSpecs') }}</h2>
+                  <dl>
+                    <template v-for="(value, key) in selectedProduct.specs" :key="key"><dt>{{ key }}</dt><dd>{{ value }}</dd></template>
+                    <dt>{{ t('stock') }}</dt><dd>{{ selectedProduct.stock }} {{ t('pieces') }}</dd>
+                  </dl>
+                </section>
+                <div class="detail-actions"><button class="primary-button" :disabled="selectedProduct.stock < 1" @click="addToCart(selectedProduct.id)"><ShoppingCart :size="19" />{{ t('addToCart') }}</button></div>
+                <section class="ai-choice mobile-ai-choice">
+                  <div><p class="eyebrow dark">{{ t('basicAi') }}</p><h2>{{ t('askWho') }}</h2></div>
+                  <div class="ai-buttons">
+                    <button class="seller-button" @click="openAi('seller')"><Store :size="20" />{{ t('askSeller') }}</button>
+                    <button class="guardian-button" @click="openAi('guardian')"><ShieldCheck :size="20" />{{ t('askGuardian') }}</button>
+                  </div>
+                  <p>{{ t('aiDescription') }}</p>
+                </section>
+              </section>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </Transition>
 
     <aside v-if="aiOpen" class="ai-drawer">
       <header :class="aiType"><div><span class="ai-avatar"><Store v-if="aiType === 'seller'" /><ShieldCheck v-else /></span><div><p>{{ aiType === 'seller' ? t('sellerView') : t('guardian') }}</p><h2>{{ aiType === 'seller' ? t('sellerAi') : t('guardianAi') }}</h2></div></div><button :aria-label="t('close')" @click="aiOpen = false"><X /></button></header>
