@@ -8,6 +8,7 @@ import {
   LogOut,
   MessageCircle,
   Minus,
+  Moon,
   Package,
   Plus,
   Search,
@@ -16,6 +17,7 @@ import {
   ShoppingCart,
   Star,
   Store,
+  Sun,
   Trash2,
   User,
   X,
@@ -31,6 +33,8 @@ import {
 } from './api.js';
 
 const user = ref(session.user);
+const THEME_STORAGE_KEY = 'nudge-mind-theme';
+const theme = ref(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
 const authMode = ref('login');
 const authBusy = ref(false);
 const authError = ref('');
@@ -78,6 +82,13 @@ const cartTotal = computed(() => cart.value.reduce((sum, item) => sum + Number(i
 
 function money(value) {
   return Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function toggleTheme() {
+  theme.value = theme.value === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = theme.value;
+  localStorage.setItem(THEME_STORAGE_KEY, theme.value);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme.value === 'dark' ? '#161719' : '#f7f1ef');
 }
 
 function notify(message, kind = 'success') {
@@ -309,6 +320,16 @@ onUnmounted(() => {
     </section>
 
     <section class="auth-panel">
+      <button
+        class="theme-toggle auth-theme-toggle"
+        type="button"
+        :aria-label="theme === 'dark' ? '切换到浅色模式' : '切换到深色模式'"
+        :title="theme === 'dark' ? '切换到浅色模式' : '切换到深色模式'"
+        @click="toggleTheme"
+      >
+        <Sun v-if="theme === 'dark'" :size="18" />
+        <Moon v-else :size="18" />
+      </button>
       <form class="auth-card" @submit.prevent="submitAuth">
         <div>
           <p class="eyebrow dark">欢迎使用</p>
@@ -351,6 +372,16 @@ onUnmounted(() => {
         <button :class="{ active: page === 'orders' }" @click="showOrders"><History :size="17" />购买记录</button>
       </nav>
       <div class="top-actions">
+        <button
+          class="theme-toggle"
+          type="button"
+          :aria-label="theme === 'dark' ? '切换到浅色模式' : '切换到深色模式'"
+          :title="theme === 'dark' ? '切换到浅色模式' : '切换到深色模式'"
+          @click="toggleTheme"
+        >
+          <Sun v-if="theme === 'dark'" :size="19" />
+          <Moon v-else :size="19" />
+        </button>
         <button class="cart-button" aria-label="购物车" @click="showCart">
           <ShoppingCart :size="20" />
           <span v-if="cartCount" class="cart-count">{{ cartCount }}</span>

@@ -4,11 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Nudge Mind 消费决策研究原型" />
-    <meta name="theme-color" content="#16382c" />
+    <meta name="theme-color" content="#f7f1ef" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Nudge Mind</title>
   </head>
   <body>
+    <script>
+      (() => {
+        const savedTheme = localStorage.getItem('nudge-mind-theme');
+        const theme = savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          ? 'dark'
+          : 'light';
+        document.documentElement.dataset.theme = theme;
+        document.querySelector('meta[name="theme-color"]').content = theme === 'dark' ? '#161719' : '#f7f1ef';
+      })();
+    </script>
     <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
   </body>

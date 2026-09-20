@@ -37,7 +37,7 @@ h1, h2 { font-family: 'DM Serif Display', 'Noto Sans SC', serif; font-weight: 40
 .story-copy h1 { margin-bottom: 24px; font-size: clamp(47px, 5.4vw, 78px); line-height: 1.06; letter-spacing: -.035em; }
 .story-copy p { max-width: 570px; color: rgba(255,255,255,.7); font-size: 18px; line-height: 1.8; }
 .story-note { position: relative; z-index: 1; font-size: 13px; color: rgba(255,255,255,.48); }
-.auth-panel { display: grid; place-items: center; padding: 48px; background: #fbfaf6; }
+.auth-panel { position: relative; display: grid; place-items: center; padding: 48px; background: #fbfaf6; }
 .auth-card { width: min(440px, 100%); display: grid; gap: 22px; }
 .auth-card h2 { margin-bottom: 8px; font-size: 38px; letter-spacing: -.02em; }
 .muted { color: var(--muted); line-height: 1.7; }
@@ -60,7 +60,10 @@ input:focus, textarea:focus { border-color: #ad3c4b; box-shadow: 0 0 0 3px rgba(
 .main-nav button { height: 100%; display: flex; align-items: center; gap: 6px; border: 0; border-bottom: 2px solid transparent; padding: 0 13px; color: #75666a; background: transparent; font-weight: 600; }
 .main-nav button.active { color: var(--red); border-bottom-color: var(--red); }
 .top-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
-.cart-button, .icon-button { position: relative; display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); background: #fff; }
+.cart-button, .icon-button, .theme-toggle { position: relative; display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); background: #fff; }
+.theme-toggle { transition: background .2s, border-color .2s, color .2s, transform .2s; }
+.theme-toggle:hover { border-color: var(--red); color: var(--red); transform: translateY(-1px); }
+.auth-theme-toggle { position: absolute; top: 24px; right: 24px; }
 .cart-count { position: absolute; right: -5px; top: -6px; min-width: 19px; height: 19px; display: grid; place-items: center; padding: 0 5px; border-radius: 10px; color: white; background: #bd633f; font-size: 11px; font-weight: 700; }
 .user-chip { display: flex; align-items: center; gap: 7px; border-radius: 20px; padding: 9px 13px; background: var(--red-soft); font-size: 13px; font-weight: 700; }
 
@@ -210,6 +213,76 @@ input:focus, textarea:focus { border-color: #ad3c4b; box-shadow: 0 0 0 3px rgba(
 .toast { position: fixed; z-index: 100; left: 50%; bottom: 28px; display: flex; align-items: center; gap: 8px; border-radius: 13px; padding: 12px 17px; color: #fff; background: #8c1d2c; box-shadow: 0 12px 35px rgba(0,0,0,.2); transform: translateX(-50%); font-size: 13px; }
 .toast.error { background: #9c4436; }
 .toast-enter-active, .toast-leave-active { transition: .2s; }.toast-enter-from, .toast-leave-to { opacity: 0; transform: translate(-50%, 12px); }
+
+/* Theme tokens and component surfaces. The warm accent palette remains consistent in both modes. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  color: #f4ecec;
+  background: #161719;
+  --ink: #f4ecec;
+  --red: #d65b6b;
+  --red-soft: #44242b;
+  --cream: #161719;
+  --paper: #222326;
+  --gold: #e7b35c;
+  --line: #414146;
+  --muted: #b7afb2;
+  --shadow: 0 20px 60px rgba(0, 0, 0, .32);
+}
+
+:root[data-theme='dark'] .auth-panel,
+:root[data-theme='dark'] .search-box,
+:root[data-theme='dark'] .category-row button,
+:root[data-theme='dark'] .cart-button,
+:root[data-theme='dark'] .icon-button,
+:root[data-theme='dark'] .theme-toggle,
+:root[data-theme='dark'] input,
+:root[data-theme='dark'] textarea,
+:root[data-theme='dark'] .cart-item,
+:root[data-theme='dark'] .order-card,
+:root[data-theme='dark'] .modal-card,
+:root[data-theme='dark'] .ai-context,
+:root[data-theme='dark'] .ai-input {
+  background: #222326;
+}
+
+:root[data-theme='dark'] .auth-panel { background: #1d1e21; }
+:root[data-theme='dark'] label > span { color: #ded4d6; }
+:root[data-theme='dark'] input,
+:root[data-theme='dark'] textarea { border-color: #4c4b50; }
+:root[data-theme='dark'] .topbar { border-bottom-color: rgba(255, 255, 255, .1); background: rgba(27, 28, 31, .9); }
+:root[data-theme='dark'] .main-nav button { color: #c9c0c2; }
+:root[data-theme='dark'] .main-nav button.active { color: #f07987; border-bottom-color: #f07987; }
+:root[data-theme='dark'] .theme-toggle:hover { border-color: #f07987; color: #f07987; }
+:root[data-theme='dark'] .product-card { border-color: #3a393e; box-shadow: 0 6px 28px rgba(0, 0, 0, .2); }
+:root[data-theme='dark'] .product-image-wrap,
+:root[data-theme='dark'] .detail-visual { background: #302c30; }
+:root[data-theme='dark'] .product-foot strong,
+:root[data-theme='dark'] .detail-price strong,
+:root[data-theme='dark'] .cart-item > strong,
+:root[data-theme='dark'] .order-total strong,
+:root[data-theme='dark'] .modal-total strong { color: #f09b75; }
+:root[data-theme='dark'] .state-card,
+:root[data-theme='dark'] .empty-state { border-color: #505056; background: rgba(34, 35, 38, .72); }
+:root[data-theme='dark'] .back-button,
+:root[data-theme='dark'] .detail-subtitle,
+:root[data-theme='dark'] .detail-description { color: #d1c6c8; }
+:root[data-theme='dark'] .spec-panel dt,
+:root[data-theme='dark'] .rating span { color: #aaaeb0; }
+:root[data-theme='dark'] .spec-panel dd { color: #f0e8e9; }
+:root[data-theme='dark'] .spec-panel dt,
+:root[data-theme='dark'] .spec-panel dd,
+:root[data-theme='dark'] .order-items > div { border-bottom-color: #414146; }
+:root[data-theme='dark'] .ai-choice { border-color: #71414b; background: linear-gradient(135deg, #352329, #292528); }
+:root[data-theme='dark'] .seller-button { border-color: #8e7547; color: #f0cb85; background: #352d20; }
+:root[data-theme='dark'] .guardian-button { border-color: #8b525d; color: #f2afb7; background: #3b252b; }
+:root[data-theme='dark'] .quantity-control button { background: #303136; }
+:root[data-theme='dark'] .order-head { background: #2b2c30; }
+:root[data-theme='dark'] .status-pill { color: #f5b1bb; background: #49262e; }
+:root[data-theme='dark'] .ai-drawer { background: #1d1e21; box-shadow: -20px 0 60px rgba(0, 0, 0, .45); }
+:root[data-theme='dark'] .message > p { color: #eee7e8; background: #333337; }
+:root[data-theme='dark'] .message.user > p { background: #b74354; }
+:root[data-theme='dark'] .form-error { background: #4b2927; color: #ffb7ad; }
 
 @media (max-width: 1000px) {
   .product-grid { grid-template-columns: repeat(3, 1fr); }
