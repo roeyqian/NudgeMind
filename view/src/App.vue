@@ -343,7 +343,7 @@ onUnmounted(() => {
   <div v-else class="app-shell">
     <header class="topbar">
       <button class="brand brand-button" @click="goBrowse">
-        <span class="brand-mark">N</span>
+        <img class="brand-logo" src="/favicon.svg" alt="" />
         <span>Nudge Mind</span>
       </button>
       <nav class="main-nav" aria-label="主导航">
