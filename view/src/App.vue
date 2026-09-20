@@ -298,6 +298,11 @@ async function addToCart(productId, quantity = 1) {
   }
 }
 
+function addSuggestedProductToCart() {
+  if (!selectedProduct.value) return;
+  addToCart(selectedProduct.value.id);
+}
+
 async function showCart() {
   closeProductDrawer();
   page.value = 'cart';
@@ -390,7 +395,14 @@ async function sendAiMessage() {
       aiType: aiType.value,
       productId: selectedProduct.value.id,
     });
-    aiMessages.value.push({ role: 'assistant', content: result.response });
+    aiMessages.value.push({
+      role: 'assistant',
+      content: result.response,
+      add_to_cart: result.add_to_cart,
+      scarcity: result.scarcity,
+      social_proof: result.social_proof,
+      price_anchor: result.price_anchor,
+    });
   } catch (error) {
     aiMessages.value.pop();
     aiInput.value = message;
@@ -707,7 +719,16 @@ onUnmounted(() => {
       <div class="ai-context"><img :src="selectedProduct.image_url" :alt="selectedProduct.name" /><div><span>{{ t('discussing') }}</span><strong>{{ selectedProduct.name }}</strong></div></div>
       <div class="message-list">
         <div v-if="!aiMessages.length && !aiBusy" class="ai-empty"><MessageCircle :size="35" /><p>{{ aiType === 'seller' ? t('sellerEmpty') : t('guardianEmpty') }}</p></div>
-        <div v-for="(message, index) in aiMessages" :key="index" class="message" :class="message.role"><span>{{ message.role === 'user' ? t('you') : (aiType === 'seller' ? t('sellerAi') : t('guardianAi')) }}</span><p>{{ message.content }}</p></div>
+        <div v-for="(message, index) in aiMessages" :key="index" class="message" :class="message.role">
+          <span>{{ message.role === 'user' ? t('you') : (aiType === 'seller' ? t('sellerAi') : t('guardianAi')) }}</span>
+          <p>{{ message.content }}</p>
+          <div v-if="message.role === 'assistant' && selectedProduct" class="ai-nudge-components">
+            <button v-if="message.add_to_cart" class="ai-add-to-cart" :disabled="selectedProduct.stock < 1" @click="addSuggestedProductToCart"><ShoppingCart :size="16" />{{ t('aiAddToCart') }}</button>
+            <p v-if="message.scarcity" class="ai-nudge scarcity">{{ t('aiScarcity', { stock: selectedProduct.stock }) }}</p>
+            <p v-if="message.social_proof" class="ai-nudge social-proof">{{ t('aiSocialProof', { count: selectedProduct.sales_count }) }}</p>
+            <p v-if="message.price_anchor" class="ai-nudge price-anchor">{{ t('aiPriceAnchor', { originalPrice: money(selectedProduct.original_price), price: money(selectedProduct.price) }) }}</p>
+          </div>
+        </div>
         <div v-if="aiBusy" class="message assistant pending"><span>{{ aiType === 'seller' ? t('sellerAi') : t('guardianAi') }}</span><p><i></i><i></i><i></i></p></div>
       </div>
       <form class="ai-input" @submit.prevent="sendAiMessage"><textarea v-model="aiInput" rows="2" maxlength="800" :placeholder="aiType === 'seller' ? t('sellerPlaceholder') : t('guardianPlaceholder')" @keydown.enter.exact.prevent="sendAiMessage"></textarea><button :disabled="!aiInput.trim() || aiBusy">{{ t('send') }}</button></form>

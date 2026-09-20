@@ -231,6 +231,13 @@ input:focus, textarea:focus { border-color: #ad3c4b; box-shadow: 0 0 0 3px rgba(
 .message.user > span { text-align: right; }
 .message > p { margin: 0; border-radius: 15px 15px 15px 4px; padding: 11px 13px; color: #45363a; background: #f1e9e8; font-size: 13px; line-height: 1.7; white-space: pre-wrap; }
 .message.user > p { border-radius: 15px 15px 4px 15px; color: #fff; background: #9b2738; }
+.ai-nudge-components { display: grid; gap: 7px; margin-top: 8px; }
+.ai-add-to-cart { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 38px; width: 100%; border: 0; border-radius: 10px; color: #fff; background: var(--red); font-size: 12px; font-weight: 700; box-shadow: 0 7px 16px rgba(140,29,44,.16); }
+.ai-add-to-cart:hover { background: #a92739; }
+.ai-nudge { margin: 0; border-radius: 9px; padding: 8px 10px; font-size: 11px; font-weight: 700; line-height: 1.45; }
+.ai-nudge.scarcity { color: #8a401d; background: #fff0d9; }
+.ai-nudge.social-proof { color: #476553; background: #e5f1e8; }
+.ai-nudge.price-anchor { color: #7b3a2b; background: #f6e2db; }
 .message.pending p { display: flex; gap: 5px; width: 58px; }
 .message.pending i { width: 6px; height: 6px; border-radius: 50%; background: #829087; animation: pulse 1s infinite alternate; }
 .message.pending i:nth-child(2) { animation-delay: .2s; }.message.pending i:nth-child(3) { animation-delay: .4s; }
@@ -317,6 +324,9 @@ input:focus, textarea:focus { border-color: #ad3c4b; box-shadow: 0 0 0 3px rgba(
 :root[data-theme='dark'] .ai-drawer { background: #1d1e21; box-shadow: -20px 0 60px rgba(0, 0, 0, .45); }
 :root[data-theme='dark'] .message > p { color: #eee7e8; background: #333337; }
 :root[data-theme='dark'] .message.user > p { background: #b74354; }
+:root[data-theme='dark'] .ai-nudge.scarcity { color: #ffd39b; background: #493421; }
+:root[data-theme='dark'] .ai-nudge.social-proof { color: #b9dec3; background: #243b2c; }
+:root[data-theme='dark'] .ai-nudge.price-anchor { color: #ffc0a9; background: #482d2a; }
 :root[data-theme='dark'] .form-error { background: #4b2927; color: #ffb7ad; }
 
 @media (max-width: 1000px) {
