@@ -49,9 +49,10 @@ export async function getCategories({ env }) {
   return json({ categories: results });
 }
 
-export async function getProductImage({ env, params }) {
+export async function getProductImage({ env, params, url }) {
   const product = await env.nudge_mind_db.prepare('SELECT name, category_id, tags_json FROM products WHERE id = ?').bind(params.id).first();
   if (!product) throw { status: 404, message: '商品不存在' };
+  const locale = url.searchParams.get('locale') === 'en' ? 'en' : 'zh';
   const palette = {
     cat_digital: ['#b7c9c1', '#24483a'],
     cat_fashion: ['#d9c9bc', '#663f31'],
@@ -59,8 +60,9 @@ export async function getProductImage({ env, params }) {
     cat_beauty: ['#e7c9c5', '#7a4047'],
     cat_food: ['#e7d2a5', '#674c25'],
   }[product.category_id] || ['#d5d8d0', '#34443d'];
-  const name = escapeXml(product.name);
-  const iconLabel = getProductIconLabel(product);
+  const translation = locale === 'en' ? productImageTranslations[params.id] : null;
+  const name = escapeXml(translation?.name || product.name);
+  const iconLabel = translation?.label || getProductIconLabel(product);
   const label = escapeXml(iconLabel);
   const labelSize = Array.from(iconLabel).length <= 1 ? 210 : Array.from(iconLabel).length <= 2 ? 170 : Array.from(iconLabel).length <= 3 ? 128 : Array.from(iconLabel).length <= 4 ? 98 : 76;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 680" role="img" aria-label="${name}">
@@ -104,6 +106,24 @@ function getProductIconLabel(product) {
   const withoutSpecification = name.replace(/\s+\d+(?:[.\d]*\s*)?(?:袋|盒|片|个|支|ml|g|kg|L|英寸)?\s*$/iu, '');
   return Array.from(withoutSpecification || name || '商品').slice(-4).join('');
 }
+
+const productImageTranslations = {
+  prod_001: { name: 'Lightweight Creator Laptop 14', label: 'LAPTOP' },
+  prod_002: { name: 'Noise-Cancelling Over-Ear Headphones', label: 'AUDIO' },
+  prod_003: { name: 'Fitness Smartwatch', label: 'WATCH' },
+  prod_004: { name: 'City Cushion Running Shoes', label: 'RUN' },
+  prod_005: { name: 'Lightweight Commuter Tote', label: 'TOTE' },
+  prod_006: { name: 'Relaxed Straight-Leg Jeans', label: 'DENIM' },
+  prod_007: { name: 'Smart Robot Vacuum & Mop', label: 'CLEAN' },
+  prod_008: { name: 'Desktop Air Purifier', label: 'AIR' },
+  prod_009: { name: 'Pour-Over Temperature-Control Kettle', label: 'BREW' },
+  prod_010: { name: 'Daily Lightweight Sunscreen', label: 'SPF' },
+  prod_011: { name: 'Constant-Temperature Ionic Hair Dryer', label: 'DRY' },
+  prod_012: { name: 'Soothing Hydrating Mask Set', label: 'MASK' },
+  prod_013: { name: 'Medium-Roast Drip Coffee', label: 'COFFEE' },
+  prod_014: { name: 'Daily Mixed Nuts, 30 Packs', label: 'NUTS' },
+  prod_015: { name: '72% Dark Chocolate Set', label: 'DARK' },
+};
 
 function productImageUrl(productId) {
   return `/api/products/${encodeURIComponent(productId)}/image?v=icon-label-v2`;

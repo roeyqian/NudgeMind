@@ -11,6 +11,8 @@
   <body>
     <script>
       (() => {
+        const savedLocale = localStorage.getItem('nudge-mind-locale');
+        document.documentElement.lang = savedLocale === 'en' ? 'en' : 'zh-CN';
         const savedTheme = localStorage.getItem('nudge-mind-theme');
         const theme = savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)
           ? 'dark'

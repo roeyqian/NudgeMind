@@ -32,9 +32,11 @@ import {
   ProductAPI,
   session,
 } from './api.js';
+import { LOCALE_STORAGE_KEY, localizeCatalogItem, messages, translateCatalogText } from './i18n.js';
 
 const user = ref(session.user);
 const THEME_STORAGE_KEY = 'nudge-mind-theme';
+const locale = ref(localStorage.getItem(LOCALE_STORAGE_KEY) === 'en' ? 'en' : 'zh');
 const theme = ref(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
 const authMode = ref('login');
 const authBusy = ref(false);
@@ -66,7 +68,38 @@ const aiBusy = ref(false);
 
 const toast = reactive({ show: false, message: '', kind: 'success' });
 let toastTimer;
-const productNameCollator = new Intl.Collator('zh-Hans-CN-u-co-pinyin', { numeric: true, sensitivity: 'base' });
+
+function t(key, params = {}) {
+  return (messages[locale.value][key] || key).replace(/\{(\w+)\}/g, (_, name) => params[name] ?? '');
+}
+
+function localizeItems(items) {
+  return items.map((item) => localizeCatalogItem(item, locale.value));
+}
+
+function localizeCategories(items) {
+  return items.map((item) => ({ ...item, name: translateCatalogText(item.name, locale.value) }));
+}
+
+function applyLocale() {
+  products.value = localizeItems(products.value);
+  categories.value = localizeCategories(categories.value);
+  cart.value = localizeItems(cart.value);
+  orders.value = orders.value.map((order) => ({
+    ...order,
+    items: order.items.map((item) => ({ ...item, product_name: translateCatalogText(item.product_name, locale.value) })),
+  }));
+  selectedProduct.value = localizeCatalogItem(selectedProduct.value, locale.value);
+}
+
+function toggleLocale() {
+  locale.value = locale.value === 'zh' ? 'en' : 'zh';
+  localStorage.setItem(LOCALE_STORAGE_KEY, locale.value);
+  document.documentElement.lang = locale.value === 'en' ? 'en' : 'zh-CN';
+  document.title = 'Nudge Mind';
+  document.querySelector('meta[name="description"]')?.setAttribute('content', t('pageDescription'));
+  applyLocale();
+}
 
 const filteredProducts = computed(() => {
   const keyword = searchText.value.trim().toLowerCase();
@@ -94,11 +127,11 @@ const cartCount = computed(() => cart.value.reduce((sum, item) => sum + Number(i
 const cartTotal = computed(() => cart.value.reduce((sum, item) => sum + Number(item.price) * Number(item.quantity), 0));
 
 function money(value) {
-  return Number(value || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return Number(value || 0).toLocaleString(locale.value === 'en' ? 'en-US' : 'zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function compareProductsByName(left, right) {
-  return productNameCollator.compare(left.name, right.name) || String(left.id).localeCompare(String(right.id));
+  return left.name.localeCompare(right.name, locale.value === 'en' ? 'en' : 'zh-Hans-CN-u-co-pinyin', { numeric: true, sensitivity: 'base' }) || String(left.id).localeCompare(String(right.id));
 }
 
 function toggleTheme() {
@@ -166,9 +199,9 @@ async function loadInitialData() {
       ProductAPI.categories(),
       CartAPI.get(),
     ]);
-    products.value = productData.products;
-    categories.value = categoryData.categories;
-    cart.value = cartData.items;
+    products.value = localizeItems(productData.products);
+    categories.value = localizeCategories(categoryData.categories);
+    cart.value = localizeItems(cartData.items);
   } catch (error) {
     notify(error.message, 'error');
   } finally {
@@ -179,7 +212,7 @@ async function loadInitialData() {
 async function openProduct(product) {
   catalogBusy.value = true;
   try {
-    selectedProduct.value = (await ProductAPI.detail(product.id)).product;
+    selectedProduct.value = localizeCatalogItem((await ProductAPI.detail(product.id)).product, locale.value);
     page.value = 'detail';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   } catch (error) {
@@ -192,8 +225,8 @@ async function openProduct(product) {
 async function addToCart(productId, quantity = 1) {
   try {
     await CartAPI.add(productId, quantity);
-    cart.value = (await CartAPI.get()).items;
-    notify('已加入购物车');
+    cart.value = localizeItems((await CartAPI.get()).items);
+    notify(t('added'));
   } catch (error) {
     notify(error.message, 'error');
   }
@@ -203,7 +236,7 @@ async function showCart() {
   page.value = 'cart';
   cartBusy.value = true;
   try {
-    cart.value = (await CartAPI.get()).items;
+    cart.value = localizeItems((await CartAPI.get()).items);
   } catch (error) {
     notify(error.message, 'error');
   } finally {
@@ -216,7 +249,7 @@ async function changeQuantity(item, delta) {
   if (quantity < 1) return;
   try {
     await CartAPI.update(item.id, quantity);
-    cart.value = (await CartAPI.get()).items;
+    cart.value = localizeItems((await CartAPI.get()).items);
   } catch (error) {
     notify(error.message, 'error');
   }
@@ -225,8 +258,8 @@ async function changeQuantity(item, delta) {
 async function removeCartItem(item) {
   try {
     await CartAPI.remove(item.id);
-    cart.value = (await CartAPI.get()).items;
-    notify('已从购物车移除');
+    cart.value = localizeItems((await CartAPI.get()).items);
+    notify(t('removed'));
   } catch (error) {
     notify(error.message, 'error');
   }
@@ -238,7 +271,7 @@ async function submitOrder() {
     const result = await OrderAPI.create({ ...checkoutForm });
     checkoutOpen.value = false;
     cart.value = [];
-    notify(`模拟购买完成：${result.orderNo}`);
+    notify(t('orderComplete', { orderNo: result.orderNo }));
     await showOrders();
   } catch (error) {
     notify(error.message, 'error');
@@ -251,7 +284,10 @@ async function showOrders() {
   page.value = 'orders';
   ordersBusy.value = true;
   try {
-    orders.value = (await OrderAPI.list()).orders;
+    orders.value = (await OrderAPI.list()).orders.map((order) => ({
+      ...order,
+      items: order.items.map((item) => ({ ...item, product_name: translateCatalogText(item.product_name, locale.value) })),
+    }));
   } catch (error) {
     notify(error.message, 'error');
   } finally {
@@ -304,10 +340,12 @@ function goBrowse() {
 
 function handleExpired() {
   resetSession();
-  authError.value = '登录已过期，请重新登录。';
+  authError.value = t('sessionExpired');
 }
 
 onMounted(() => {
+  document.documentElement.lang = locale.value === 'en' ? 'en' : 'zh-CN';
+  document.querySelector('meta[name="description"]')?.setAttribute('content', t('pageDescription'));
   window.addEventListener(AUTH_EXPIRED_EVENT, handleExpired);
   if (user.value) {
     checkoutForm.name = user.value.username;
@@ -329,19 +367,20 @@ onUnmounted(() => {
         <span>Nudge Mind</span>
       </a>
       <div class="story-copy">
-        <span class="eyebrow">消费决策研究原型</span>
-        <h1>在下单之前，<br />多一个思考的空间。</h1>
-        <p>浏览研究商品、比较信息，并从两种不同立场的 AI 获取基础回应。</p>
+        <span class="eyebrow">{{ t('prototype') }}</span>
+        <h1>{{ t('prePurchase') }}<br />{{ t('thinkingSpace') }}</h1>
+        <p>{{ t('authIntro') }}</p>
       </div>
-      <div class="story-note">研究版本 · 所有购买均为模拟行为</div>
+      <div class="story-note">{{ t('researchOnly') }}</div>
     </section>
 
     <section class="auth-panel">
+      <button class="language-toggle auth-language-toggle" type="button" :aria-label="t('language')" :title="t('language')" @click="toggleLocale">{{ t('language') }}</button>
       <button
         class="theme-toggle auth-theme-toggle"
         type="button"
-        :aria-label="theme === 'dark' ? '切换到浅色模式' : '切换到深色模式'"
-        :title="theme === 'dark' ? '切换到浅色模式' : '切换到深色模式'"
+        :aria-label="theme === 'dark' ? t('switchToLight') : t('switchToDark')"
+        :title="theme === 'dark' ? t('switchToLight') : t('switchToDark')"
         @click="toggleTheme"
       >
         <Sun v-if="theme === 'dark'" :size="18" />
@@ -349,30 +388,30 @@ onUnmounted(() => {
       </button>
       <form class="auth-card" @submit.prevent="submitAuth">
         <div>
-          <p class="eyebrow dark">欢迎使用</p>
-          <h2>{{ authMode === 'login' ? '登录 Nudge Mind' : '创建研究账户' }}</h2>
-          <p class="muted">{{ authMode === 'login' ? '继续你的商品浏览与决策。' : '注册后即可进入研究商品目录。' }}</p>
+          <p class="eyebrow dark">{{ t('welcome') }}</p>
+          <h2>{{ authMode === 'login' ? t('loginTitle') : t('registerTitle') }}</h2>
+          <p class="muted">{{ authMode === 'login' ? t('loginIntro') : t('registerIntro') }}</p>
         </div>
 
         <label>
-          <span>用户名</span>
-          <input v-model.trim="authForm.username" autocomplete="username" required minlength="2" maxlength="40" placeholder="请输入用户名" />
+          <span>{{ t('username') }}</span>
+          <input v-model.trim="authForm.username" autocomplete="username" required minlength="2" maxlength="40" :placeholder="t('usernamePlaceholder')" />
         </label>
         <label v-if="authMode === 'register'">
-          <span>邮箱</span>
+          <span>{{ t('email') }}</span>
           <input v-model.trim="authForm.email" type="email" autocomplete="email" required placeholder="name@example.com" />
         </label>
         <label>
-          <span>密码</span>
-          <input v-model="authForm.password" type="password" :autocomplete="authMode === 'login' ? 'current-password' : 'new-password'" required minlength="8" placeholder="至少 8 位字符" />
+          <span>{{ t('password') }}</span>
+          <input v-model="authForm.password" type="password" :autocomplete="authMode === 'login' ? 'current-password' : 'new-password'" required minlength="8" :placeholder="t('passwordPlaceholder')" />
         </label>
         <p v-if="authError" class="form-error">{{ authError }}</p>
         <button class="primary-button full" :disabled="authBusy">
           <LoaderCircle v-if="authBusy" :size="18" class="spin" />
-          {{ authMode === 'login' ? '登录' : '注册并进入' }}
+          {{ authMode === 'login' ? t('login') : t('register') }}
         </button>
         <button class="text-button" type="button" @click="authMode = authMode === 'login' ? 'register' : 'login'; authError = ''">
-          {{ authMode === 'login' ? '还没有账户？立即注册' : '已有账户？返回登录' }}
+          {{ authMode === 'login' ? t('noAccount') : t('hasAccount') }}
         </button>
       </form>
     </section>
@@ -384,27 +423,28 @@ onUnmounted(() => {
         <img class="brand-logo" src="/favicon.svg" alt="" />
         <span>Nudge Mind</span>
       </button>
-      <nav class="main-nav" aria-label="主导航">
-        <button :class="{ active: page === 'browse' || page === 'detail' }" @click="goBrowse">发现</button>
-        <button :class="{ active: page === 'orders' }" @click="showOrders"><History :size="17" />购买记录</button>
+      <nav class="main-nav" :aria-label="t('discover')">
+        <button :class="{ active: page === 'browse' || page === 'detail' }" @click="goBrowse">{{ t('discover') }}</button>
+        <button :class="{ active: page === 'orders' }" @click="showOrders"><History :size="17" />{{ t('purchaseHistory') }}</button>
       </nav>
       <div class="top-actions">
+        <button class="language-toggle" type="button" :aria-label="t('language')" :title="t('language')" @click="toggleLocale">{{ t('language') }}</button>
         <button
           class="theme-toggle"
           type="button"
-          :aria-label="theme === 'dark' ? '切换到浅色模式' : '切换到深色模式'"
-          :title="theme === 'dark' ? '切换到浅色模式' : '切换到深色模式'"
+          :aria-label="theme === 'dark' ? t('switchToLight') : t('switchToDark')"
+          :title="theme === 'dark' ? t('switchToLight') : t('switchToDark')"
           @click="toggleTheme"
         >
           <Sun v-if="theme === 'dark'" :size="19" />
           <Moon v-else :size="19" />
         </button>
-        <button class="cart-button" aria-label="购物车" @click="showCart">
+        <button class="cart-button" :aria-label="t('cart')" @click="showCart">
           <ShoppingCart :size="20" />
           <span v-if="cartCount" class="cart-count">{{ cartCount }}</span>
         </button>
         <div class="user-chip"><User :size="17" />{{ user.username }}</div>
-        <button class="icon-button" aria-label="退出登录" title="退出登录" @click="logout"><LogOut :size="19" /></button>
+        <button class="icon-button" :aria-label="t('logout')" :title="t('logout')" @click="logout"><LogOut :size="19" /></button>
       </div>
     </header>
 
@@ -412,8 +452,8 @@ onUnmounted(() => {
       <section class="hero">
         <div>
           <p class="eyebrow">Nudge Mind</p>
-          <h1><em>被设计的选择</em><br />当 AI 学会利用它诱导你的消费决策</h1>
-          <p>当传统的界面诱导遇上能够理解用户的人工智能，每一个按钮、提示、推荐与默认选项，都可能成为推动你下单或让你放弃购买的一部分。</p>
+          <h1><em>{{ t('designedChoices') }}</em><br />{{ t('heroTitle') }}</h1>
+          <p>{{ t('heroText') }}</p>
         </div>
         <div class="hero-orbit" aria-hidden="true">
           <div class="orbit-ring"></div>
@@ -426,49 +466,49 @@ onUnmounted(() => {
       <section class="catalog-section">
         <div class="catalog-heading">
           <div>
-            <p class="eyebrow dark">研究商品库</p>
-            <h2>探索全部商品</h2>
+            <p class="eyebrow dark">{{ t('researchCatalog') }}</p>
+            <h2>{{ t('exploreAll') }}</h2>
           </div>
           <div class="catalog-tools">
             <label class="search-box">
               <Search :size="19" />
-              <input v-model="searchText" type="search" placeholder="搜索名称、介绍或标签" />
+              <input v-model="searchText" type="search" :placeholder="t('searchPlaceholder')" />
             </label>
             <label class="sort-box">
               <ListFilter :size="18" aria-hidden="true" />
-              <span class="sr-only">商品排序</span>
-              <select v-model="productSort" aria-label="商品排序">
-                <option value="default">综合排序</option>
-                <option value="name">首字母 A–Z</option>
-                <option value="price-asc">价格从低到高</option>
-                <option value="price-desc">价格从高到低</option>
+              <span class="sr-only">{{ t('productSort') }}</span>
+              <select v-model="productSort" :aria-label="t('productSort')">
+                <option value="default">{{ t('defaultSort') }}</option>
+                <option value="name">{{ t('nameSort') }}</option>
+                <option value="price-asc">{{ t('priceAsc') }}</option>
+                <option value="price-desc">{{ t('priceDesc') }}</option>
               </select>
             </label>
           </div>
         </div>
 
         <div class="category-row">
-          <button :class="{ active: selectedCategory === 'all' }" @click="selectedCategory = 'all'">全部</button>
+          <button :class="{ active: selectedCategory === 'all' }" @click="selectedCategory = 'all'">{{ t('all') }}</button>
           <button v-for="category in categories" :key="category.id" :class="{ active: selectedCategory === category.id }" @click="selectedCategory = category.id">
             <span>{{ category.icon }}</span>{{ category.name }}
           </button>
         </div>
 
-        <div v-if="catalogBusy" class="state-card"><LoaderCircle class="spin" />正在加载商品…</div>
-        <div v-else-if="!filteredProducts.length" class="state-card"><Package />没有找到匹配的商品</div>
+        <div v-if="catalogBusy" class="state-card"><LoaderCircle class="spin" />{{ t('loadingProducts') }}</div>
+        <div v-else-if="!filteredProducts.length" class="state-card"><Package />{{ t('noProducts') }}</div>
         <div v-else class="product-grid">
           <article v-for="product in filteredProducts" :key="product.id" class="product-card" @click="openProduct(product)">
             <div class="product-image-wrap">
               <img :src="product.image_url" :alt="product.name" />
-              <span v-if="product.is_new" class="product-badge">NEW</span>
+              <span v-if="product.is_new" class="product-badge">{{ t('new') }}</span>
             </div>
             <div class="product-body">
-              <div class="rating"><Star :size="15" fill="currentColor" /> {{ product.rating }} <span>· {{ product.sales_count }} 人关注</span></div>
+              <div class="rating"><Star :size="15" fill="currentColor" /> {{ product.rating }} <span>· {{ product.sales_count }} {{ t('followers') }}</span></div>
               <h3>{{ product.name }}</h3>
               <p>{{ product.subtitle }}</p>
               <div class="product-foot">
-                <div><strong>¥{{ money(product.price) }}</strong><s v-if="product.original_price">¥{{ money(product.original_price) }}</s></div>
-                <button class="mini-cart" title="加入购物车" aria-label="加入购物车" @click.stop="addToCart(product.id)"><Plus :size="20" /></button>
+                <div><strong>{{ t('currency') }}{{ money(product.price) }}</strong><s v-if="product.original_price">{{ t('currency') }}{{ money(product.original_price) }}</s></div>
+                <button class="mini-cart" :title="t('addToCart')" :aria-label="t('addToCart')" @click.stop="addToCart(product.id)"><Plus :size="20" /></button>
               </div>
             </div>
           </article>
@@ -477,107 +517,107 @@ onUnmounted(() => {
     </template>
 
     <main v-else-if="page === 'detail' && selectedProduct" class="page-container detail-page">
-      <button class="back-button" @click="goBrowse"><ArrowLeft :size="18" />返回商品列表</button>
+      <button class="back-button" @click="goBrowse"><ArrowLeft :size="18" />{{ t('backToProducts') }}</button>
       <div class="detail-layout">
         <section class="detail-visual">
           <img :src="selectedProduct.image_url" :alt="selectedProduct.name" />
-          <span>研究样本 · {{ selectedProduct.category_name }}</span>
+          <span>{{ t('researchSample') }} · {{ selectedProduct.category_name }}</span>
         </section>
         <section class="detail-info">
-          <div class="rating"><Star :size="16" fill="currentColor" /> {{ selectedProduct.rating }} <span>· {{ selectedProduct.sales_count }} 人关注</span></div>
+          <div class="rating"><Star :size="16" fill="currentColor" /> {{ selectedProduct.rating }} <span>· {{ selectedProduct.sales_count }} {{ t('followers') }}</span></div>
           <h1>{{ selectedProduct.name }}</h1>
           <p class="detail-subtitle">{{ selectedProduct.subtitle }}</p>
-          <div class="detail-price"><strong>¥{{ money(selectedProduct.price) }}</strong><s v-if="selectedProduct.original_price">¥{{ money(selectedProduct.original_price) }}</s></div>
+          <div class="detail-price"><strong>{{ t('currency') }}{{ money(selectedProduct.price) }}</strong><s v-if="selectedProduct.original_price">{{ t('currency') }}{{ money(selectedProduct.original_price) }}</s></div>
           <p class="detail-description">{{ selectedProduct.description }}</p>
 
           <div class="tag-list"><span v-for="tag in selectedProduct.tags" :key="tag">{{ tag }}</span></div>
 
           <section class="spec-panel">
-            <h2>商品参数</h2>
+            <h2>{{ t('productSpecs') }}</h2>
             <dl>
               <template v-for="(value, key) in selectedProduct.specs" :key="key">
                 <dt>{{ key }}</dt><dd>{{ value }}</dd>
               </template>
-              <dt>库存</dt><dd>{{ selectedProduct.stock }} 件</dd>
+              <dt>{{ t('stock') }}</dt><dd>{{ selectedProduct.stock }} {{ t('pieces') }}</dd>
             </dl>
           </section>
 
           <div class="detail-actions">
-            <button class="primary-button" :disabled="selectedProduct.stock < 1" @click="addToCart(selectedProduct.id)"><ShoppingCart :size="19" />加入购物车</button>
+            <button class="primary-button" :disabled="selectedProduct.stock < 1" @click="addToCart(selectedProduct.id)"><ShoppingCart :size="19" />{{ t('addToCart') }}</button>
           </div>
 
           <section class="ai-choice">
-            <div><p class="eyebrow dark">基础 AI 对话</p><h2>你想问谁？</h2></div>
+            <div><p class="eyebrow dark">{{ t('basicAi') }}</p><h2>{{ t('askWho') }}</h2></div>
             <div class="ai-buttons">
-              <button class="seller-button" @click="openAi('seller')"><Store :size="20" />问 卖家 AI</button>
-              <button class="guardian-button" @click="openAi('guardian')"><ShieldCheck :size="20" />问 管家 AI</button>
+              <button class="seller-button" @click="openAi('seller')"><Store :size="20" />{{ t('askSeller') }}</button>
+              <button class="guardian-button" @click="openAi('guardian')"><ShieldCheck :size="20" />{{ t('askGuardian') }}</button>
             </div>
-            <p>卖家 AI 从商品价值出发；管家 AI 帮你核对需求与风险。两者都只参考当前页面信息。</p>
+            <p>{{ t('aiDescription') }}</p>
           </section>
         </section>
       </div>
     </main>
 
     <main v-else-if="page === 'cart'" class="page-container">
-      <div class="page-heading"><div><p class="eyebrow dark">你的选择</p><h1>购物车</h1></div><button class="back-button" @click="goBrowse"><ArrowLeft :size="18" />继续浏览</button></div>
-      <div v-if="cartBusy" class="state-card"><LoaderCircle class="spin" />正在加载购物车…</div>
-      <div v-else-if="!cart.length" class="empty-state"><ShoppingBag :size="48" /><h2>购物车还是空的</h2><p>从商品目录中挑选一些研究商品吧。</p><button class="primary-button" @click="goBrowse">浏览商品</button></div>
+      <div class="page-heading"><div><p class="eyebrow dark">{{ t('yourChoices') }}</p><h1>{{ t('cart') }}</h1></div><button class="back-button" @click="goBrowse"><ArrowLeft :size="18" />{{ t('continueBrowsing') }}</button></div>
+      <div v-if="cartBusy" class="state-card"><LoaderCircle class="spin" />{{ t('loadingCart') }}</div>
+      <div v-else-if="!cart.length" class="empty-state"><ShoppingBag :size="48" /><h2>{{ t('emptyCart') }}</h2><p>{{ t('emptyCartText') }}</p><button class="primary-button" @click="goBrowse">{{ t('browseProducts') }}</button></div>
       <div v-else class="cart-layout">
         <section class="cart-list">
           <article v-for="item in cart" :key="item.id" class="cart-item">
             <img :src="item.image_url" :alt="item.name" />
-            <div class="cart-item-main"><h3>{{ item.name }}</h3><p>单价 ¥{{ money(item.price) }} · 库存 {{ item.stock }}</p><button class="remove-button" @click="removeCartItem(item)"><Trash2 :size="16" />移除</button></div>
+            <div class="cart-item-main"><h3>{{ item.name }}</h3><p>{{ t('unitPrice') }} {{ t('currency') }}{{ money(item.price) }} · {{ t('stock') }} {{ item.stock }}</p><button class="remove-button" @click="removeCartItem(item)"><Trash2 :size="16" />{{ t('remove') }}</button></div>
             <div class="quantity-control"><button @click="changeQuantity(item, -1)"><Minus :size="16" /></button><span>{{ item.quantity }}</span><button :disabled="item.quantity >= item.stock" @click="changeQuantity(item, 1)"><Plus :size="16" /></button></div>
-            <strong>¥{{ money(item.price * item.quantity) }}</strong>
+            <strong>{{ t('currency') }}{{ money(item.price * item.quantity) }}</strong>
           </article>
         </section>
         <aside class="summary-card">
-          <p class="eyebrow dark">订单小计</p>
-          <div><span>商品数量</span><strong>{{ cartCount }} 件</strong></div>
-          <div><span>配送费用</span><strong>¥0.00</strong></div>
-          <div class="summary-total"><span>合计</span><strong>¥{{ money(cartTotal) }}</strong></div>
-          <button class="primary-button full" @click="checkoutOpen = true">模拟购买</button>
-          <p>本研究项目不会发起真实付款或配送。</p>
+          <p class="eyebrow dark">{{ t('orderSubtotal') }}</p>
+          <div><span>{{ t('itemCount') }}</span><strong>{{ cartCount }} {{ t('pieces') }}</strong></div>
+          <div><span>{{ t('shipping') }}</span><strong>{{ t('currency') }}0.00</strong></div>
+          <div class="summary-total"><span>{{ t('total') }}</span><strong>{{ t('currency') }}{{ money(cartTotal) }}</strong></div>
+          <button class="primary-button full" @click="checkoutOpen = true">{{ t('simulatedPurchase') }}</button>
+          <p>{{ t('noRealPayment') }}</p>
         </aside>
       </div>
     </main>
 
     <main v-else-if="page === 'orders'" class="page-container">
-      <div class="page-heading"><div><p class="eyebrow dark">研究记录</p><h1>购买记录</h1></div><button class="back-button" @click="goBrowse"><ArrowLeft :size="18" />返回商品</button></div>
-      <div v-if="ordersBusy" class="state-card"><LoaderCircle class="spin" />正在加载记录…</div>
-      <div v-else-if="!orders.length" class="empty-state"><History :size="48" /><h2>暂无购买记录</h2><p>完成模拟购买后，订单会显示在这里。</p></div>
+      <div class="page-heading"><div><p class="eyebrow dark">{{ t('researchRecords') }}</p><h1>{{ t('purchaseHistory') }}</h1></div><button class="back-button" @click="goBrowse"><ArrowLeft :size="18" />{{ t('backToItems') }}</button></div>
+      <div v-if="ordersBusy" class="state-card"><LoaderCircle class="spin" />{{ t('loadingOrders') }}</div>
+      <div v-else-if="!orders.length" class="empty-state"><History :size="48" /><h2>{{ t('noOrders') }}</h2><p>{{ t('noOrdersText') }}</p></div>
       <section v-else class="order-list">
         <article v-for="order in orders" :key="order.id" class="order-card">
-          <div class="order-head"><div><span>{{ order.order_no }}</span><p>{{ order.created_at }}</p></div><span class="status-pill"><CheckCircle2 :size="15" />已完成</span></div>
+          <div class="order-head"><div><span>{{ order.order_no }}</span><p>{{ order.created_at }}</p></div><span class="status-pill"><CheckCircle2 :size="15" />{{ t('completed') }}</span></div>
           <div class="order-items">
-            <div v-for="item in order.items" :key="item.id"><img :src="item.product_image" :alt="item.product_name" /><span>{{ item.product_name }} × {{ item.quantity }}</span><strong>¥{{ money(item.subtotal) }}</strong></div>
+            <div v-for="item in order.items" :key="item.id"><img :src="item.product_image" :alt="item.product_name" /><span>{{ item.product_name }} × {{ item.quantity }}</span><strong>{{ t('currency') }}{{ money(item.subtotal) }}</strong></div>
           </div>
-          <div class="order-total">合计 <strong>¥{{ money(order.final_amount) }}</strong></div>
+          <div class="order-total">{{ t('total') }} <strong>{{ t('currency') }}{{ money(order.final_amount) }}</strong></div>
         </article>
       </section>
     </main>
 
     <div v-if="checkoutOpen" class="modal-backdrop" @click.self="checkoutOpen = false">
       <form class="modal-card" @submit.prevent="submitOrder">
-        <button class="modal-close" type="button" aria-label="关闭" @click="checkoutOpen = false"><X /></button>
-        <p class="eyebrow dark">模拟购买</p><h2>确认研究信息</h2><p class="muted">以下信息只用于保存本次模拟订单。</p>
-        <label><span>姓名</span><input v-model.trim="checkoutForm.name" required maxlength="50" /></label>
-        <label><span>联系电话</span><input v-model.trim="checkoutForm.phone" required maxlength="30" placeholder="研究用信息" /></label>
-        <label><span>地址</span><textarea v-model.trim="checkoutForm.address" required maxlength="200" rows="3" placeholder="研究用信息"></textarea></label>
-        <div class="modal-total"><span>模拟支付金额</span><strong>¥{{ money(cartTotal) }}</strong></div>
-        <button class="primary-button full" :disabled="checkoutBusy"><LoaderCircle v-if="checkoutBusy" :size="18" class="spin" />确认模拟购买</button>
+        <button class="modal-close" type="button" :aria-label="t('close')" @click="checkoutOpen = false"><X /></button>
+        <p class="eyebrow dark">{{ t('simulatedPurchase') }}</p><h2>{{ t('confirmInfo') }}</h2><p class="muted">{{ t('orderInfoOnly') }}</p>
+        <label><span>{{ t('name') }}</span><input v-model.trim="checkoutForm.name" required maxlength="50" /></label>
+        <label><span>{{ t('phone') }}</span><input v-model.trim="checkoutForm.phone" required maxlength="30" :placeholder="t('researchInfo')" /></label>
+        <label><span>{{ t('address') }}</span><textarea v-model.trim="checkoutForm.address" required maxlength="200" rows="3" :placeholder="t('researchInfo')"></textarea></label>
+        <div class="modal-total"><span>{{ t('paymentAmount') }}</span><strong>{{ t('currency') }}{{ money(cartTotal) }}</strong></div>
+        <button class="primary-button full" :disabled="checkoutBusy"><LoaderCircle v-if="checkoutBusy" :size="18" class="spin" />{{ t('confirmPurchase') }}</button>
       </form>
     </div>
 
     <aside v-if="aiOpen" class="ai-drawer">
-      <header :class="aiType"><div><span class="ai-avatar"><Store v-if="aiType === 'seller'" /><ShieldCheck v-else /></span><div><p>{{ aiType === 'seller' ? '卖家视角' : '消费管家' }}</p><h2>{{ aiType === 'seller' ? '卖家 AI' : '管家 AI' }}</h2></div></div><button aria-label="关闭 AI 对话" @click="aiOpen = false"><X /></button></header>
-      <div class="ai-context"><img :src="selectedProduct.image_url" :alt="selectedProduct.name" /><div><span>正在讨论</span><strong>{{ selectedProduct.name }}</strong></div></div>
+      <header :class="aiType"><div><span class="ai-avatar"><Store v-if="aiType === 'seller'" /><ShieldCheck v-else /></span><div><p>{{ aiType === 'seller' ? t('sellerView') : t('guardian') }}</p><h2>{{ aiType === 'seller' ? t('sellerAi') : t('guardianAi') }}</h2></div></div><button :aria-label="t('close')" @click="aiOpen = false"><X /></button></header>
+      <div class="ai-context"><img :src="selectedProduct.image_url" :alt="selectedProduct.name" /><div><span>{{ t('discussing') }}</span><strong>{{ selectedProduct.name }}</strong></div></div>
       <div class="message-list">
-        <div v-if="!aiMessages.length && !aiBusy" class="ai-empty"><MessageCircle :size="35" /><p>{{ aiType === 'seller' ? '可以询问商品特点、用途或购买价值。' : '可以询问需求匹配、预算或购买风险。' }}</p></div>
-        <div v-for="(message, index) in aiMessages" :key="index" class="message" :class="message.role"><span>{{ message.role === 'user' ? '你' : (aiType === 'seller' ? '卖家 AI' : '管家 AI') }}</span><p>{{ message.content }}</p></div>
-        <div v-if="aiBusy" class="message assistant pending"><span>{{ aiType === 'seller' ? '卖家 AI' : '管家 AI' }}</span><p><i></i><i></i><i></i></p></div>
+        <div v-if="!aiMessages.length && !aiBusy" class="ai-empty"><MessageCircle :size="35" /><p>{{ aiType === 'seller' ? t('sellerEmpty') : t('guardianEmpty') }}</p></div>
+        <div v-for="(message, index) in aiMessages" :key="index" class="message" :class="message.role"><span>{{ message.role === 'user' ? t('you') : (aiType === 'seller' ? t('sellerAi') : t('guardianAi')) }}</span><p>{{ message.content }}</p></div>
+        <div v-if="aiBusy" class="message assistant pending"><span>{{ aiType === 'seller' ? t('sellerAi') : t('guardianAi') }}</span><p><i></i><i></i><i></i></p></div>
       </div>
-      <form class="ai-input" @submit.prevent="sendAiMessage"><textarea v-model="aiInput" rows="2" maxlength="800" :placeholder="aiType === 'seller' ? '问问这件商品有什么价值…' : '问问是否适合你的需求…'" @keydown.enter.exact.prevent="sendAiMessage"></textarea><button :disabled="!aiInput.trim() || aiBusy">发送</button></form>
+      <form class="ai-input" @submit.prevent="sendAiMessage"><textarea v-model="aiInput" rows="2" maxlength="800" :placeholder="aiType === 'seller' ? t('sellerPlaceholder') : t('guardianPlaceholder')" @keydown.enter.exact.prevent="sendAiMessage"></textarea><button :disabled="!aiInput.trim() || aiBusy">{{ t('send') }}</button></form>
     </aside>
 
     <Transition name="toast">
