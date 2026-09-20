@@ -32,7 +32,7 @@ import {
   ProductAPI,
   session,
 } from './api.js';
-import { LOCALE_STORAGE_KEY, localizeCatalogItem, messages, translateCatalogText } from './i18n.js';
+import { LOCALE_STORAGE_KEY, localizeCatalogItem, localizeImageUrl, messages, translateCatalogText } from './i18n.js';
 
 const user = ref(session.user);
 const THEME_STORAGE_KEY = 'nudge-mind-theme';
@@ -84,13 +84,21 @@ function localizeCategories(items) {
   return items.map((item) => ({ ...item, name: translateCatalogText(item.name, locale.value) }));
 }
 
+function localizeOrderItems(items) {
+  return items.map((item) => ({
+    ...item,
+    product_name: translateCatalogText(item.product_name, locale.value),
+    product_image: localizeImageUrl(item.product_image, locale.value),
+  }));
+}
+
 function applyLocale() {
   products.value = localizeItems(products.value);
   categories.value = localizeCategories(categories.value);
   cart.value = localizeItems(cart.value);
   orders.value = orders.value.map((order) => ({
     ...order,
-    items: order.items.map((item) => ({ ...item, product_name: translateCatalogText(item.product_name, locale.value) })),
+    items: localizeOrderItems(order.items),
   }));
   selectedProduct.value = localizeCatalogItem(selectedProduct.value, locale.value);
 }
@@ -302,7 +310,7 @@ async function showOrders() {
   try {
     orders.value = (await OrderAPI.list()).orders.map((order) => ({
       ...order,
-      items: order.items.map((item) => ({ ...item, product_name: translateCatalogText(item.product_name, locale.value) })),
+      items: localizeOrderItems(order.items),
     }));
   } catch (error) {
     notify(error.message, 'error');

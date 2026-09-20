@@ -54,7 +54,7 @@ export function localizeCatalogItem(item, locale) {
   };
 }
 
-function localizeImageUrl(imageUrl, locale) {
+export function localizeImageUrl(imageUrl, locale) {
   if (typeof imageUrl !== 'string' || !imageUrl) return imageUrl;
   const withoutLocale = imageUrl.replace(/([?&])locale=[^&]*/u, '');
   return `${withoutLocale}${withoutLocale.includes('?') ? '&' : '?'}locale=${locale}`;
