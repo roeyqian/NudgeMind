@@ -1,4 +1,4 @@
-export async function completeChat(env, systemPrompt, messages, signal) {
+export async function completeChat(env, systemPrompt, messages, signal, options = {}) {
   if (!env.DEEPSEEK_API_KEY) throw { status: 503, message: 'AI 服务尚未配置' };
   const baseUrl = String(env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com').replace(/\/+$/, '');
   let response;
@@ -11,8 +11,8 @@ export async function completeChat(env, systemPrompt, messages, signal) {
       },
       body: JSON.stringify({
         model: env.DEEPSEEK_MODEL || 'deepseek-chat',
-        temperature: clampTemperature(env.AI_TEMPERATURE),
-        max_tokens: 500,
+        temperature: clampTemperature(options.temperature ?? env.AI_TEMPERATURE),
+        max_tokens: clampMaxTokens(options.maxTokens, 500),
         messages: [{ role: 'system', content: systemPrompt }, ...messages],
       }),
       signal,
@@ -30,4 +30,9 @@ export async function completeChat(env, systemPrompt, messages, signal) {
 function clampTemperature(value) {
   const number = Number(value);
   return Number.isFinite(number) ? Math.max(0, Math.min(2, number)) : 0.5;
+}
+
+function clampMaxTokens(value, fallback) {
+  const number = Number(value);
+  return Number.isInteger(number) ? Math.max(1, Math.min(2_000, number)) : fallback;
 }
