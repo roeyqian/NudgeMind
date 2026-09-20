@@ -81,6 +81,7 @@ export const OrderAPI = {
 
 export const AIAPI = {
   chat: (payload) => request('/ai/chat', { method: 'POST', body: JSON.stringify(payload) }),
+  allHistory: () => request('/ai/history/all'),
   history: (productId, aiType) => {
     const query = new URLSearchParams({ productId, aiType }).toString();
     return request(`/ai/history?${query}`);

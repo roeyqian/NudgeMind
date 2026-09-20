@@ -2,12 +2,14 @@
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import {
   ArrowLeft,
+  ArrowDownUp,
   CheckCircle2,
   History,
   LoaderCircle,
   ListFilter,
   LogOut,
   MessageCircle,
+  MessageSquareText,
   Minus,
   Moon,
   Package,
@@ -64,6 +66,9 @@ const checkoutBusy = ref(false);
 const checkoutForm = reactive({ name: '', phone: '', address: '' });
 const orders = ref([]);
 const ordersBusy = ref(false);
+const chatHistory = ref([]);
+const chatHistoryBusy = ref(false);
+const chatHistorySort = ref('desc');
 
 const aiOpen = ref(false);
 const aiType = ref('seller');
@@ -123,6 +128,28 @@ const paginationText = computed(() => locale.value === 'en'
 
 const cartCount = computed(() => cart.value.reduce((sum, item) => sum + Number(item.quantity), 0));
 const cartTotal = computed(() => cart.value.reduce((sum, item) => sum + Number(item.price) * Number(item.quantity), 0));
+const chatHistoryGroups = computed(() => {
+  const groups = new Map();
+  [...chatHistory.value].reverse().forEach((message) => {
+    const key = `${message.productId}:${message.aiType}`;
+    if (!groups.has(key)) {
+      groups.set(key, {
+        key,
+        productName: translateCatalogText(message.productName, locale.value),
+        aiType: message.aiType,
+        latestTimestamp: message.timestamp,
+        messages: [],
+      });
+    }
+    const group = groups.get(key);
+    group.messages.push(message);
+    group.latestTimestamp = message.timestamp;
+  });
+  return [...groups.values()].sort((first, second) => {
+    const comparison = String(first.latestTimestamp).localeCompare(String(second.latestTimestamp));
+    return chatHistorySort.value === 'desc' ? -comparison : comparison;
+  });
+});
 
 function money(value) {
   return Number(value || 0).toLocaleString(locale.value === 'en' ? 'en-US' : 'zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -182,6 +209,7 @@ function resetSession() {
   categories.value = [];
   cart.value = [];
   orders.value = [];
+  chatHistory.value = [];
   selectedProduct.value = null;
   productDrawerOpen.value = false;
   productBusy.value = false;
@@ -368,6 +396,33 @@ async function showOrders() {
   }
 }
 
+async function showChatHistory() {
+  closeProductDrawer();
+  page.value = 'chat-history';
+  chatHistoryBusy.value = true;
+  try {
+    chatHistory.value = (await AIAPI.allHistory()).messages;
+  } catch (error) {
+    notify(error.message, 'error');
+  } finally {
+    chatHistoryBusy.value = false;
+  }
+}
+
+function toggleChatHistorySort() {
+  chatHistorySort.value = chatHistorySort.value === 'desc' ? 'asc' : 'desc';
+}
+
+function formatHistoryTime(value) {
+  const normalized = String(value || '').includes('T') ? value : `${value || ''}`.replace(' ', 'T') + 'Z';
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(locale.value === 'en' ? 'en-US' : 'zh-CN', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+}
+
 async function openAi(type) {
   aiType.value = type;
   aiOpen.value = true;
@@ -514,6 +569,7 @@ onUnmounted(() => {
       <nav class="main-nav" :aria-label="t('discover')">
         <button :class="{ active: page === 'browse' }" @click="goBrowse">{{ t('discover') }}</button>
         <button :class="{ active: page === 'orders' }" @click="showOrders"><History :size="17" />{{ t('purchaseHistory') }}</button>
+        <button :class="{ active: page === 'chat-history' }" @click="showChatHistory"><MessageSquareText :size="17" />{{ t('chatHistory') }}</button>
       </nav>
       <div class="top-actions">
         <button class="language-toggle" type="button" :aria-label="t('language')" :title="t('language')" @click="toggleLocale">{{ t('language') }}</button>
@@ -644,6 +700,39 @@ onUnmounted(() => {
             <div v-for="item in order.items" :key="item.id"><img :src="item.product_image" :alt="item.product_name" /><span>{{ item.product_name }} × {{ item.quantity }}</span><strong>{{ t('currency') }}{{ money(item.subtotal) }}</strong></div>
           </div>
           <div class="order-total">{{ t('total') }} <strong>{{ t('currency') }}{{ money(order.final_amount) }}</strong></div>
+        </article>
+      </section>
+    </main>
+
+    <main v-else-if="page === 'chat-history'" class="page-container">
+      <div class="page-heading">
+        <div><p class="eyebrow dark">{{ t('yourChoices') }}</p><h1>{{ t('chatHistory') }}</h1></div>
+        <button class="history-sort-button" type="button" @click="toggleChatHistorySort">
+          <ArrowDownUp :size="17" />
+          {{ chatHistorySort === 'desc' ? t('chatHistorySortNewest') : t('chatHistorySortOldest') }}
+        </button>
+      </div>
+      <div v-if="chatHistoryBusy" class="state-card"><LoaderCircle class="spin" />{{ t('loadingChatHistory') }}</div>
+      <div v-else-if="!chatHistoryGroups.length" class="empty-state"><MessageSquareText :size="48" /><h2>{{ t('noChatHistory') }}</h2><p>{{ t('noChatHistoryText') }}</p></div>
+      <section v-else class="chat-history-list">
+        <article v-for="conversation in chatHistoryGroups" :key="conversation.key" class="chat-history-card">
+          <header class="chat-history-head">
+            <div>
+              <p>{{ conversation.productName }}</p>
+              <span class="history-ai-type" :class="conversation.aiType">
+                <Store v-if="conversation.aiType === 'seller'" :size="14" />
+                <ShieldCheck v-else :size="14" />
+                {{ conversation.aiType === 'seller' ? t('sellerAi') : t('guardianAi') }}
+              </span>
+            </div>
+            <MessageCircle :size="19" />
+          </header>
+          <div class="chat-history-messages">
+            <div v-for="(message, index) in conversation.messages" :key="`${conversation.key}-${index}`" class="history-message" :class="message.role">
+              <span>{{ message.role === 'user' ? t('you') : (conversation.aiType === 'seller' ? t('sellerAi') : t('guardianAi')) }} · {{ formatHistoryTime(message.timestamp) }}</span>
+              <p>{{ message.content }}</p>
+            </div>
+          </div>
         </article>
       </section>
     </main>

@@ -139,6 +139,32 @@ export async function getHistory({ request, env, url }) {
   })) });
 }
 
+export async function getAllHistory({ request, env }) {
+  const { user } = await requireUser(request, env);
+  const { results } = await env.nudge_mind_db.prepare(`
+    SELECT
+      ai_conversations.role,
+      ai_conversations.content,
+      ai_conversations.ai_type,
+      ai_conversations.product_id,
+      ai_conversations.timestamp,
+      products.name AS product_name
+    FROM ai_conversations
+    JOIN products ON products.id = ai_conversations.product_id
+    WHERE ai_conversations.user_id = ?
+    ORDER BY ai_conversations.timestamp DESC, ai_conversations.rowid DESC
+    LIMIT 500
+  `).bind(user.userId).all();
+  return json({ messages: results.map((item) => ({
+    role: item.role,
+    content: item.content,
+    aiType: item.ai_type,
+    productId: item.product_id,
+    productName: item.product_name,
+    timestamp: item.timestamp,
+  })) });
+}
+
 function parseAiResponse(rawResponse, product) {
   const parsed = parseJsonObject(rawResponse);
   const response = String(parsed?.response || rawResponse || '').trim().slice(0, 2_000);
