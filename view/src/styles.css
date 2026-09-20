@@ -69,9 +69,10 @@ input:focus, textarea:focus { border-color: #ad3c4b; box-shadow: 0 0 0 3px rgba(
 
 .hero { min-height: 430px; display: flex; align-items: center; justify-content: space-between; overflow: hidden; padding: 60px max(28px, calc((100vw - 1220px) / 2)); color: #fff4f1; background: linear-gradient(118deg, #731421, #9b2738 64%, #bd4655); }
 .hero > div:first-child { position: relative; z-index: 2; }
+.hero .eyebrow { font-size: 15px; }
 .hero h1 { max-width: 720px; margin-bottom: 20px; font-size: clamp(46px, 5vw, 70px); line-height: 1.08; letter-spacing: -.035em; }
 .hero h1 em { color: #e9bc70; font-weight: 400; }
-.hero p:last-child { color: rgba(255,255,255,.67); font-size: 16px; }
+.hero p:last-child { max-width: 720px; color: rgba(255,255,255,.67); font-size: 20px; line-height: 1.65; }
 .hero-orbit { position: relative; flex: 0 0 340px; height: 340px; margin-right: 30px; }
 .orbit-ring { position: absolute; inset: 20px; border: 1px solid rgba(255,255,255,.18); border-radius: 50%; box-shadow: 0 0 0 48px rgba(255,255,255,.035), 0 0 0 96px rgba(255,255,255,.018); }
 .orbit-center { position: absolute; inset: 105px; display: grid; place-items: center; border-radius: 50%; color: #651521; background: #f1c375; font: 92px 'DM Serif Display'; box-shadow: 0 20px 70px rgba(0,0,0,.24); }

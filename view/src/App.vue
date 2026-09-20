@@ -394,9 +394,9 @@ onUnmounted(() => {
     <template v-if="page === 'browse'">
       <section class="hero">
         <div>
-          <p class="eyebrow">Nudge Mind · 第一版</p>
-          <h1>看看商品，也听听<br /><em>不同立场</em>的声音。</h1>
-          <p>AI 入口只在商品详情中出现。信息与决定，始终由你掌握。</p>
+          <p class="eyebrow">Nudge Mind</p>
+          <h1><em>被设计的选择</em><br />当 AI 学会利用它诱导你的消费决策</h1>
+          <p>当传统的界面诱导遇上能够理解用户的人工智能，每一个按钮、提示、推荐与默认选项，都可能成为推动你下单或让你放弃购买的一部分。</p>
         </div>
         <div class="hero-orbit" aria-hidden="true">
           <div class="orbit-ring"></div>
