@@ -42,8 +42,9 @@ export async function createOrder({ request, env }) {
   return json({ orderId, orderNo, totalAmount, status: 'completed' }, 201);
 }
 
-export async function getOrders({ request, env }) {
+export async function getOrders({ request, env, url }) {
   const { user } = await requireUser(request, env);
+  const locale = url.searchParams.get('locale') === 'en' ? 'en' : 'zh';
   const { results: orders } = await env.nudge_mind_db.prepare(`
     SELECT id, order_no, total_amount, final_amount, status, created_at
     FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 100
@@ -52,9 +53,12 @@ export async function getOrders({ request, env }) {
 
   const placeholders = orders.map(() => '?').join(',');
   const { results: items } = await env.nudge_mind_db.prepare(`
-    SELECT id, order_id, product_id, product_name, product_image, price, quantity, subtotal
-    FROM order_items WHERE order_id IN (${placeholders}) ORDER BY rowid
-  `).bind(...orders.map((order) => order.id)).all();
+    SELECT oi.id, oi.order_id, oi.product_id, COALESCE(pt.name, oi.product_name) AS product_name,
+      oi.product_image, oi.price, oi.quantity, oi.subtotal
+    FROM order_items oi
+    LEFT JOIN product_translations pt ON pt.product_id = oi.product_id AND pt.locale = ?
+    WHERE oi.order_id IN (${placeholders}) ORDER BY oi.rowid
+  `).bind(locale, ...orders.map((order) => order.id)).all();
   const itemsByOrder = new Map();
   for (const item of items) {
     if (!itemsByOrder.has(item.order_id)) itemsByOrder.set(item.order_id, []);

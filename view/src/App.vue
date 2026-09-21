@@ -101,15 +101,27 @@ function localizeOrderItems(items) {
   }));
 }
 
-function applyLocale() {
-  products.value = localizeItems(products.value);
+async function applyLocale() {
   categories.value = localizeCategories(categories.value);
-  cart.value = localizeItems(cart.value);
-  orders.value = orders.value.map((order) => ({
-    ...order,
-    items: localizeOrderItems(order.items),
-  }));
-  selectedProduct.value = localizeCatalogItem(selectedProduct.value, locale.value);
+  if (!user.value) return;
+  try {
+    const refreshes = [
+      loadProducts(),
+      CartAPI.get(locale.value).then((data) => { cart.value = localizeItems(data.items); }),
+    ];
+    if (selectedProduct.value) {
+      refreshes.push(ProductAPI.detail(selectedProduct.value.id, locale.value).then((data) => {
+        selectedProduct.value = localizeCatalogItem(data.product, locale.value);
+      }));
+    }
+    if (page.value === 'orders') refreshes.push(OrderAPI.list(locale.value).then((data) => {
+      orders.value = data.orders.map((order) => ({ ...order, items: localizeOrderItems(order.items) }));
+    }));
+    if (page.value === 'chat-history') refreshes.push(AIAPI.allHistory(locale.value).then((data) => { chatHistory.value = data.messages; }));
+    await Promise.all(refreshes);
+  } catch (error) {
+    notify(error.message, 'error');
+  }
 }
 
 function toggleLocale() {
@@ -118,7 +130,7 @@ function toggleLocale() {
   document.documentElement.lang = locale.value === 'en' ? 'en' : 'zh-CN';
   document.title = 'Nudge Mind';
   document.querySelector('meta[name="description"]')?.setAttribute('content', t('pageDescription'));
-  applyLocale();
+  void applyLocale();
 }
 
 const totalProductPages = computed(() => Math.max(1, Math.ceil(productTotal.value / PRODUCTS_PER_PAGE)));
@@ -222,7 +234,7 @@ async function loadInitialData() {
   try {
     const [categoryData, cartData] = await Promise.all([
       ProductAPI.categories(),
-      CartAPI.get(),
+      CartAPI.get(locale.value),
     ]);
     categories.value = localizeCategories(categoryData.categories);
     cart.value = localizeItems(cartData.items);
@@ -238,6 +250,7 @@ async function loadProducts() {
   catalogBusy.value = true;
   try {
     const productData = await ProductAPI.list({
+      locale: locale.value,
       limit: PRODUCTS_PER_PAGE,
       offset: (catalogPage.value - 1) * PRODUCTS_PER_PAGE,
       ...(selectedCategory.value !== 'all' ? { category: selectedCategory.value } : {}),
@@ -301,7 +314,7 @@ async function openProduct(product) {
   productDrawerOpen.value = true;
   productBusy.value = true;
   try {
-    selectedProduct.value = localizeCatalogItem((await ProductAPI.detail(product.id)).product, locale.value);
+    selectedProduct.value = localizeCatalogItem((await ProductAPI.detail(product.id, locale.value)).product, locale.value);
   } catch (error) {
     productDrawerOpen.value = false;
     notify(error.message, 'error');
@@ -319,7 +332,7 @@ function closeProductDrawer() {
 async function addToCart(productId, quantity = 1) {
   try {
     await CartAPI.add(productId, quantity);
-    cart.value = localizeItems((await CartAPI.get()).items);
+    cart.value = localizeItems((await CartAPI.get(locale.value)).items);
     notify(t('added'));
   } catch (error) {
     notify(error.message, 'error');
@@ -336,7 +349,7 @@ async function showCart() {
   page.value = 'cart';
   cartBusy.value = true;
   try {
-    cart.value = localizeItems((await CartAPI.get()).items);
+    cart.value = localizeItems((await CartAPI.get(locale.value)).items);
   } catch (error) {
     notify(error.message, 'error');
   } finally {
@@ -349,7 +362,7 @@ async function changeQuantity(item, delta) {
   if (quantity < 1) return;
   try {
     await CartAPI.update(item.id, quantity);
-    cart.value = localizeItems((await CartAPI.get()).items);
+    cart.value = localizeItems((await CartAPI.get(locale.value)).items);
   } catch (error) {
     notify(error.message, 'error');
   }
@@ -358,7 +371,7 @@ async function changeQuantity(item, delta) {
 async function removeCartItem(item) {
   try {
     await CartAPI.remove(item.id);
-    cart.value = localizeItems((await CartAPI.get()).items);
+    cart.value = localizeItems((await CartAPI.get(locale.value)).items);
     notify(t('removed'));
   } catch (error) {
     notify(error.message, 'error');
@@ -385,7 +398,7 @@ async function showOrders() {
   page.value = 'orders';
   ordersBusy.value = true;
   try {
-    orders.value = (await OrderAPI.list()).orders.map((order) => ({
+    orders.value = (await OrderAPI.list(locale.value)).orders.map((order) => ({
       ...order,
       items: localizeOrderItems(order.items),
     }));
@@ -401,7 +414,7 @@ async function showChatHistory() {
   page.value = 'chat-history';
   chatHistoryBusy.value = true;
   try {
-    chatHistory.value = (await AIAPI.allHistory()).messages;
+    chatHistory.value = (await AIAPI.allHistory(locale.value)).messages;
   } catch (error) {
     notify(error.message, 'error');
   } finally {

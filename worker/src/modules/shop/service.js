@@ -1,6 +1,7 @@
 import { json } from '../../app/http.js';
 
 export async function getProducts({ env, url }) {
+  const locale = requestedLocale(url);
   const category = String(url.searchParams.get('category') || '').trim();
   const search = String(url.searchParams.get('search') || '').trim();
   const sort = String(url.searchParams.get('sort') || 'default').trim();
@@ -13,21 +14,32 @@ export async function getProducts({ env, url }) {
     bindings.push(category);
   }
   if (search) {
-    clauses.push('(p.name LIKE ? OR p.subtitle LIKE ? OR p.description LIKE ? OR p.tags_json LIKE ?)');
+    clauses.push('(p.name LIKE ? OR p.subtitle LIKE ? OR p.description LIKE ? OR p.tags_json LIKE ? OR pt.name LIKE ? OR pt.subtitle LIKE ? OR pt.description LIKE ? OR pt.tags_json LIKE ?)');
     const pattern = `%${search}%`;
-    bindings.push(pattern, pattern, pattern, pattern);
+    bindings.push(pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern);
   }
 
   const where = clauses.join(' AND ');
   const orderBy = productOrder(sort);
-  const count = await env.nudge_mind_db.prepare(`SELECT COUNT(*) AS total FROM products p WHERE ${where}`).bind(...bindings).first();
+  const count = await env.nudge_mind_db.prepare(`
+    SELECT COUNT(*) AS total FROM products p
+    LEFT JOIN product_translations pt ON pt.product_id = p.id AND pt.locale = ?
+    WHERE ${where}
+  `).bind(locale, ...bindings).first();
   const { results } = await env.nudge_mind_db.prepare(`
-    SELECT p.*, c.name AS category_name
-    FROM products p JOIN categories c ON c.id = p.category_id
+    SELECT p.*, c.name AS category_name,
+      COALESCE(pt.name, p.name) AS name,
+      COALESCE(pt.subtitle, p.subtitle) AS subtitle,
+      COALESCE(pt.description, p.description) AS description,
+      COALESCE(pt.specs_json, p.specs_json) AS specs_json,
+      COALESCE(pt.tags_json, p.tags_json) AS tags_json
+    FROM products p
+    JOIN categories c ON c.id = p.category_id
+    LEFT JOIN product_translations pt ON pt.product_id = p.id AND pt.locale = ?
     WHERE ${where}
     ORDER BY ${orderBy}
     LIMIT ? OFFSET ?
-  `).bind(...bindings, limit, offset).all();
+  `).bind(locale, ...bindings, limit, offset).all();
 
   return json({
     products: results.map(normalizeProduct),
@@ -44,14 +56,26 @@ function productOrder(sort) {
   }[sort] || 'p.is_hot DESC, p.sales_count DESC, p.created_at DESC';
 }
 
-export async function getProduct({ env, params }) {
+export async function getProduct({ env, params, url }) {
+  const locale = requestedLocale(url);
   const product = await env.nudge_mind_db.prepare(`
-    SELECT p.*, c.name AS category_name
-    FROM products p JOIN categories c ON c.id = p.category_id
+    SELECT p.*, c.name AS category_name,
+      COALESCE(pt.name, p.name) AS name,
+      COALESCE(pt.subtitle, p.subtitle) AS subtitle,
+      COALESCE(pt.description, p.description) AS description,
+      COALESCE(pt.specs_json, p.specs_json) AS specs_json,
+      COALESCE(pt.tags_json, p.tags_json) AS tags_json
+    FROM products p
+    JOIN categories c ON c.id = p.category_id
+    LEFT JOIN product_translations pt ON pt.product_id = p.id AND pt.locale = ?
     WHERE p.id = ?
-  `).bind(params.id).first();
+  `).bind(locale, params.id).first();
   if (!product) throw { status: 404, message: '商品不存在' };
   return json({ product: normalizeProduct(product) });
+}
+
+function requestedLocale(url) {
+  return url.searchParams.get('locale') === 'en' ? 'en' : 'zh';
 }
 
 export async function getCategories({ env }) {

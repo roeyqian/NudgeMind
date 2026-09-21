@@ -1,12 +1,15 @@
 import { createId, json, readJson, requireUser } from '../../app/http.js';
 
-export async function getCart({ request, env }) {
+export async function getCart({ request, env, url }) {
   const { user } = await requireUser(request, env);
+  const locale = url.searchParams.get('locale') === 'en' ? 'en' : 'zh';
   const { results } = await env.nudge_mind_db.prepare(`
-    SELECT ci.id, ci.product_id, ci.quantity, ci.added_at, p.name, p.price, p.stock
-    FROM cart_items ci JOIN products p ON p.id = ci.product_id
+    SELECT ci.id, ci.product_id, ci.quantity, ci.added_at, COALESCE(pt.name, p.name) AS name, p.price, p.stock
+    FROM cart_items ci
+    JOIN products p ON p.id = ci.product_id
+    LEFT JOIN product_translations pt ON pt.product_id = p.id AND pt.locale = ?
     WHERE ci.user_id = ? ORDER BY ci.added_at DESC
-  `).bind(user.userId).all();
+  `).bind(locale, user.userId).all();
   const items = results.map((item) => ({ ...item, image_url: `/api/products/${encodeURIComponent(item.product_id)}/image?v=icon-label-v2` }));
   return json({ items, total: items.reduce((sum, item) => sum + Number(item.price) * Number(item.quantity), 0) });
 }

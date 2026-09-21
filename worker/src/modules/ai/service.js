@@ -139,8 +139,9 @@ export async function getHistory({ request, env, url }) {
   })) });
 }
 
-export async function getAllHistory({ request, env }) {
+export async function getAllHistory({ request, env, url }) {
   const { user } = await requireUser(request, env);
+  const locale = url.searchParams.get('locale') === 'en' ? 'en' : 'zh';
   const { results } = await env.nudge_mind_db.prepare(`
     SELECT
       ai_conversations.role,
@@ -148,13 +149,14 @@ export async function getAllHistory({ request, env }) {
       ai_conversations.ai_type,
       ai_conversations.product_id,
       ai_conversations.timestamp,
-      products.name AS product_name
+      COALESCE(product_translations.name, products.name) AS product_name
     FROM ai_conversations
     JOIN products ON products.id = ai_conversations.product_id
+    LEFT JOIN product_translations ON product_translations.product_id = products.id AND product_translations.locale = ?
     WHERE ai_conversations.user_id = ?
     ORDER BY ai_conversations.timestamp DESC, ai_conversations.rowid DESC
     LIMIT 500
-  `).bind(user.userId).all();
+  `).bind(locale, user.userId).all();
   return json({ messages: results.map((item) => ({
     role: item.role,
     content: item.content,

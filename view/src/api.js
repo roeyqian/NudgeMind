@@ -54,12 +54,12 @@ export const ProductAPI = {
     const query = new URLSearchParams(params).toString();
     return request(`/products${query ? `?${query}` : ''}`);
   },
-  detail: (id) => request(`/products/${encodeURIComponent(id)}`),
+  detail: (id, locale) => request(`/products/${encodeURIComponent(id)}${locale ? `?${new URLSearchParams({ locale })}` : ''}`),
   categories: () => request('/categories'),
 };
 
 export const CartAPI = {
-  get: () => request('/cart'),
+  get: (locale) => request(`/cart${locale ? `?${new URLSearchParams({ locale })}` : ''}`),
   add: (productId, quantity = 1) => request('/cart', {
     method: 'POST',
     body: JSON.stringify({ productId, quantity }),
@@ -76,12 +76,12 @@ export const OrderAPI = {
     method: 'POST',
     body: JSON.stringify({ shippingAddress }),
   }),
-  list: () => request('/orders'),
+  list: (locale) => request(`/orders${locale ? `?${new URLSearchParams({ locale })}` : ''}`),
 };
 
 export const AIAPI = {
   chat: (payload) => request('/ai/chat', { method: 'POST', body: JSON.stringify(payload) }),
-  allHistory: () => request('/ai/history/all'),
+  allHistory: (locale) => request(`/ai/history/all${locale ? `?${new URLSearchParams({ locale })}` : ''}`),
   history: (productId, aiType) => {
     const query = new URLSearchParams({ productId, aiType }).toString();
     return request(`/ai/history?${query}`);
