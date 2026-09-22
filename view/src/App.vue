@@ -8,6 +8,7 @@ import {
   LoaderCircle,
   ListFilter,
   LogOut,
+  Menu,
   MessageCircle,
   MessageSquareText,
   Minus,
@@ -69,6 +70,7 @@ const ordersBusy = ref(false);
 const chatHistory = ref([]);
 const chatHistoryBusy = ref(false);
 const chatHistorySort = ref('desc');
+const mobileNavOpen = ref(false);
 
 const aiOpen = ref(false);
 const aiType = ref('seller');
@@ -226,6 +228,7 @@ function resetSession() {
   productDrawerOpen.value = false;
   productBusy.value = false;
   aiOpen.value = false;
+  mobileNavOpen.value = false;
   page.value = 'browse';
 }
 
@@ -485,6 +488,10 @@ function goBrowse() {
   closeProductDrawer();
 }
 
+function closeMobileNavOnDesktop() {
+  if (window.innerWidth > 760) mobileNavOpen.value = false;
+}
+
 function handleExpired() {
   resetSession();
   authError.value = t('sessionExpired');
@@ -494,6 +501,7 @@ onMounted(() => {
   document.documentElement.lang = locale.value === 'en' ? 'en' : 'zh-CN';
   document.querySelector('meta[name="description"]')?.setAttribute('content', t('pageDescription'));
   window.addEventListener(AUTH_EXPIRED_EVENT, handleExpired);
+  window.addEventListener('resize', closeMobileNavOnDesktop);
   if (user.value) {
     checkoutForm.name = user.value.username;
     loadInitialData();
@@ -511,6 +519,7 @@ onUnmounted(() => {
     lockedPageStyles = null;
   }
   window.removeEventListener(AUTH_EXPIRED_EVENT, handleExpired);
+  window.removeEventListener('resize', closeMobileNavOnDesktop);
   clearTimeout(toastTimer);
 });
 </script>
@@ -580,9 +589,15 @@ onUnmounted(() => {
         <span>Nudge Mind</span>
       </button>
       <nav class="main-nav" :aria-label="t('discover')">
-        <button :class="{ active: page === 'browse' }" @click="goBrowse">{{ t('discover') }}</button>
-        <button :class="{ active: page === 'orders' }" @click="showOrders"><History :size="17" />{{ t('purchaseHistory') }}</button>
-        <button :class="{ active: page === 'chat-history' }" @click="showChatHistory"><MessageSquareText :size="17" />{{ t('chatHistory') }}</button>
+        <button class="mobile-nav-toggle" type="button" :aria-label="t(mobileNavOpen ? 'closeMenu' : 'openMenu')" aria-controls="main-nav-menu" :aria-expanded="mobileNavOpen" @click="mobileNavOpen = !mobileNavOpen">
+          <X v-if="mobileNavOpen" :size="20" />
+          <Menu v-else :size="20" />
+        </button>
+        <div id="main-nav-menu" class="main-nav-menu" :class="{ open: mobileNavOpen }">
+          <button :class="{ active: page === 'browse' }" @click="goBrowse(); mobileNavOpen = false">{{ t('discover') }}</button>
+          <button :class="{ active: page === 'orders' }" @click="showOrders(); mobileNavOpen = false"><History :size="17" />{{ t('purchaseHistory') }}</button>
+          <button :class="{ active: page === 'chat-history' }" @click="showChatHistory(); mobileNavOpen = false"><MessageSquareText :size="17" />{{ t('chatHistory') }}</button>
+        </div>
       </nav>
       <div class="top-actions">
         <button class="language-toggle" type="button" :aria-label="t('language')" :title="t('language')" @click="toggleLocale">{{ t('language') }}</button>

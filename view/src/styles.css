@@ -56,9 +56,11 @@ input:focus, textarea:focus { border-color: #ad3c4b; box-shadow: 0 0 0 3px rgba(
 .app-shell { min-height: 100vh; }
 .topbar { position: sticky; z-index: 20; top: 0; height: 74px; display: flex; align-items: center; gap: 42px; padding: 0 max(28px, calc((100vw - 1220px) / 2)); border-bottom: 1px solid rgba(74, 32, 41, .1); background: rgba(255,252,250,.92); backdrop-filter: blur(16px); }
 .brand-button { border: 0; background: transparent; white-space: nowrap; }
-.main-nav { height: 100%; display: flex; align-items: center; gap: 6px; }
-.main-nav button { height: 100%; display: flex; align-items: center; gap: 6px; border: 0; border-bottom: 2px solid transparent; padding: 0 13px; color: #75666a; background: transparent; font-weight: 600; }
-.main-nav button.active { color: var(--red); border-bottom-color: var(--red); }
+.main-nav { height: 100%; display: flex; align-items: center; }
+.mobile-nav-toggle { display: none; }
+.main-nav-menu { height: 100%; display: flex; align-items: center; gap: 6px; }
+.main-nav-menu button { height: 100%; display: flex; align-items: center; gap: 6px; border: 0; border-bottom: 2px solid transparent; padding: 0 13px; color: #75666a; background: transparent; font-weight: 600; }
+.main-nav-menu button.active { color: var(--red); border-bottom-color: var(--red); }
 .top-actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
 .cart-button, .icon-button, .theme-toggle, .language-toggle { position: relative; display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); background: #fff; }
 .theme-toggle { transition: background .2s, border-color .2s, color .2s, transform .2s; }
@@ -307,8 +309,8 @@ input:focus, textarea:focus { border-color: #ad3c4b; box-shadow: 0 0 0 3px rgba(
 :root[data-theme='dark'] input,
 :root[data-theme='dark'] textarea { border-color: #4c4b50; }
 :root[data-theme='dark'] .topbar { border-bottom-color: rgba(255, 255, 255, .1); background: rgba(27, 28, 31, .9); }
-:root[data-theme='dark'] .main-nav button { color: #c9c0c2; }
-:root[data-theme='dark'] .main-nav button.active { color: #f07987; border-bottom-color: #f07987; }
+:root[data-theme='dark'] .main-nav-menu button { color: #c9c0c2; }
+:root[data-theme='dark'] .main-nav-menu button.active { color: #f07987; border-bottom-color: #f07987; }
 :root[data-theme='dark'] .theme-toggle:hover,
 :root[data-theme='dark'] .language-toggle:hover { border-color: #f07987; color: #f07987; }
 :root[data-theme='dark'] .product-card { border-color: #3a393e; box-shadow: 0 6px 28px rgba(0, 0, 0, .2); }
@@ -367,11 +369,19 @@ input:focus, textarea:focus { border-color: #ad3c4b; box-shadow: 0 0 0 3px rgba(
   .story-copy h1 { font-size: 43px; }
   .story-copy p { font-size: 15px; }
   .auth-panel { padding: 38px 24px; }
-  .topbar { height: 66px; gap: 8px; padding: 0 15px; }
-  .brand-button > span:last-child, .user-chip, .main-nav button svg { display: none; }
+  .topbar { height: 66px; gap: 6px; padding: 0 12px; }
+  .brand-button > span:last-child, .user-chip { display: none; }
   .brand-mark, .brand-logo { width: 35px; height: 35px; }
-  .main-nav button { padding: 0 8px; font-size: 13px; }
-  .top-actions { gap: 6px; }
+  .main-nav { height: 40px; margin-left: auto; }
+  .mobile-nav-toggle { width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); background: #fff; }
+  .main-nav-menu { position: absolute; z-index: 1; top: calc(100% + 8px); right: 12px; left: 12px; height: auto; display: none; flex-direction: column; align-items: stretch; gap: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); box-shadow: var(--shadow); }
+  .main-nav-menu.open { display: flex; }
+  .main-nav-menu button { width: 100%; min-height: 48px; justify-content: flex-start; border-bottom: 1px solid var(--line); padding: 0 16px; font-size: 14px; }
+  .main-nav-menu button:last-child { border-bottom: 0; }
+  .main-nav-menu button.active { border-left: 3px solid var(--red); border-bottom-color: var(--line); padding-left: 13px; }
+  .top-actions { gap: 6px; margin-left: 0; }
+  :root[data-theme='dark'] .mobile-nav-toggle { border-color: #4c4b50; color: #f0e9ec; background: #222326; }
+  :root[data-theme='dark'] .main-nav-menu button.active { border-left-color: #f07987; border-bottom-color: var(--line); }
   .hero { min-height: 390px; padding: 48px 24px; }
   .hero h1 { font-size: 44px; }
   .hero-orbit { display: none; }
