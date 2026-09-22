@@ -525,7 +525,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main v-if="!user" class="auth-shell">
+  <Transition name="app" mode="out-in">
+  <main v-if="!user" key="auth" class="auth-shell">
     <section class="auth-story">
       <a class="brand brand-light" href="#" @click.prevent>
         <span class="brand-mark">N</span>
@@ -548,29 +549,35 @@ onUnmounted(() => {
         :title="theme === 'dark' ? t('switchToLight') : t('switchToDark')"
         @click="toggleTheme"
       >
-        <Sun v-if="theme === 'dark'" :size="18" />
-        <Moon v-else :size="18" />
+        <Transition name="icon-swap" mode="out-in">
+          <Sun v-if="theme === 'dark'" key="sun" :size="18" />
+          <Moon v-else key="moon" :size="18" />
+        </Transition>
       </button>
       <form class="auth-card" @submit.prevent="submitAuth">
-        <div>
-          <p class="eyebrow dark">{{ t('welcome') }}</p>
-          <h2>{{ authMode === 'login' ? t('loginTitle') : t('registerTitle') }}</h2>
-          <p class="muted">{{ authMode === 'login' ? t('loginIntro') : t('registerIntro') }}</p>
-        </div>
+        <Transition name="auth-copy" mode="out-in">
+          <div :key="authMode">
+            <p class="eyebrow dark">{{ t('welcome') }}</p>
+            <h2>{{ authMode === 'login' ? t('loginTitle') : t('registerTitle') }}</h2>
+            <p class="muted">{{ authMode === 'login' ? t('loginIntro') : t('registerIntro') }}</p>
+          </div>
+        </Transition>
 
         <label>
           <span>{{ t('username') }}</span>
           <input v-model.trim="authForm.username" autocomplete="username" required minlength="2" maxlength="40" :placeholder="t('usernamePlaceholder')" />
         </label>
-        <label v-if="authMode === 'register'">
-          <span>{{ t('email') }}</span>
-          <input v-model.trim="authForm.email" type="email" autocomplete="email" required placeholder="name@example.com" />
-        </label>
+        <Transition name="auth-field">
+          <label v-if="authMode === 'register'">
+            <span>{{ t('email') }}</span>
+            <input v-model.trim="authForm.email" type="email" autocomplete="email" required placeholder="name@example.com" />
+          </label>
+        </Transition>
         <label>
           <span>{{ t('password') }}</span>
           <input v-model="authForm.password" type="password" :autocomplete="authMode === 'login' ? 'current-password' : 'new-password'" required minlength="8" :placeholder="t('passwordPlaceholder')" />
         </label>
-        <p v-if="authError" class="form-error">{{ authError }}</p>
+        <Transition name="feedback"><p v-if="authError" class="form-error">{{ authError }}</p></Transition>
         <button class="primary-button full" :disabled="authBusy">
           <LoaderCircle v-if="authBusy" :size="18" class="spin" />
           {{ authMode === 'login' ? t('login') : t('register') }}
@@ -582,7 +589,7 @@ onUnmounted(() => {
     </section>
   </main>
 
-  <div v-else class="app-shell">
+  <div v-else key="app" class="app-shell">
     <header class="topbar">
       <button class="brand brand-button" @click="goBrowse">
         <img class="brand-logo" src="/favicon.svg" alt="" />
@@ -590,8 +597,10 @@ onUnmounted(() => {
       </button>
       <nav class="main-nav" :aria-label="t('discover')">
         <button class="mobile-nav-toggle" type="button" :aria-label="t(mobileNavOpen ? 'closeMenu' : 'openMenu')" aria-controls="main-nav-menu" :aria-expanded="mobileNavOpen" @click="mobileNavOpen = !mobileNavOpen">
-          <X v-if="mobileNavOpen" :size="20" />
-          <Menu v-else :size="20" />
+          <Transition name="icon-swap" mode="out-in">
+            <X v-if="mobileNavOpen" key="close" :size="20" />
+            <Menu v-else key="menu" :size="20" />
+          </Transition>
         </button>
         <div id="main-nav-menu" class="main-nav-menu" :class="{ open: mobileNavOpen }">
           <button :class="{ active: page === 'browse' }" @click="goBrowse(); mobileNavOpen = false">{{ t('discover') }}</button>
@@ -608,19 +617,22 @@ onUnmounted(() => {
           :title="theme === 'dark' ? t('switchToLight') : t('switchToDark')"
           @click="toggleTheme"
         >
-          <Sun v-if="theme === 'dark'" :size="19" />
-          <Moon v-else :size="19" />
+          <Transition name="icon-swap" mode="out-in">
+            <Sun v-if="theme === 'dark'" key="sun" :size="19" />
+            <Moon v-else key="moon" :size="19" />
+          </Transition>
         </button>
         <button class="cart-button" :aria-label="t('cart')" @click="showCart">
           <ShoppingCart :size="20" />
-          <span v-if="cartCount" class="cart-count">{{ cartCount }}</span>
+          <span v-if="cartCount" :key="cartCount" class="cart-count">{{ cartCount }}</span>
         </button>
         <div class="user-chip"><User :size="17" />{{ user.username }}</div>
         <button class="icon-button" :aria-label="t('logout')" :title="t('logout')" @click="logout"><LogOut :size="19" /></button>
       </div>
     </header>
 
-    <template v-if="page === 'browse'">
+    <Transition name="page" mode="out-in">
+    <div v-if="page === 'browse'" key="browse" class="browse-page">
       <section class="hero">
         <div>
           <p class="eyebrow">Nudge Mind</p>
@@ -668,8 +680,8 @@ onUnmounted(() => {
 
         <div v-if="catalogBusy" class="state-card"><LoaderCircle class="spin" />{{ t('loadingProducts') }}</div>
         <div v-else-if="!products.length" class="state-card"><Package />{{ t('noProducts') }}</div>
-        <div v-else class="product-grid">
-          <article v-for="product in products" :key="product.id" class="product-card" @click="openProduct(product)">
+        <TransitionGroup v-else :key="`${selectedCategory}-${searchText}-${productSort}-${catalogPage}`" name="catalog-list" tag="div" class="product-grid">
+          <article v-for="(product, index) in products" :key="product.id" class="product-card" :style="{ '--enter-delay': `${Math.min(index, 7) * 45}ms` }" @click="openProduct(product)">
             <div class="product-image-wrap">
               <img :src="product.image_url" :alt="product.name" />
               <span v-if="product.is_new" class="product-badge">{{ t('new') }}</span>
@@ -684,28 +696,28 @@ onUnmounted(() => {
               </div>
             </div>
           </article>
-        </div>
+        </TransitionGroup>
         <nav v-if="!catalogBusy && productTotal > PRODUCTS_PER_PAGE" class="pagination" :aria-label="paginationText.label">
           <button :disabled="catalogPage === 1" :aria-label="paginationText.previous" @click="changeCatalogPage(catalogPage - 1)">{{ paginationText.previous }}</button>
           <span>{{ catalogPage }} / {{ totalProductPages }}</span>
           <button :disabled="catalogPage === totalProductPages" :aria-label="paginationText.next" @click="changeCatalogPage(catalogPage + 1)">{{ paginationText.next }}</button>
         </nav>
       </section>
-    </template>
+    </div>
 
-    <main v-else-if="page === 'cart'" class="page-container">
+    <main v-else-if="page === 'cart'" key="cart" class="page-container">
       <div class="page-heading"><div><p class="eyebrow dark">{{ t('yourChoices') }}</p><h1>{{ t('cart') }}</h1></div><button class="back-button" @click="goBrowse"><ArrowLeft :size="18" />{{ t('continueBrowsing') }}</button></div>
       <div v-if="cartBusy" class="state-card"><LoaderCircle class="spin" />{{ t('loadingCart') }}</div>
       <div v-else-if="!cart.length" class="empty-state"><ShoppingBag :size="48" /><h2>{{ t('emptyCart') }}</h2><p>{{ t('emptyCartText') }}</p><button class="primary-button" @click="goBrowse">{{ t('browseProducts') }}</button></div>
       <div v-else class="cart-layout">
-        <section class="cart-list">
-          <article v-for="item in cart" :key="item.id" class="cart-item">
+        <TransitionGroup name="cart-list" tag="section" class="cart-list">
+          <article v-for="(item, index) in cart" :key="item.id" class="cart-item" :style="{ '--enter-delay': `${Math.min(index, 7) * 45}ms` }">
             <img :src="item.image_url" :alt="item.name" />
             <div class="cart-item-main"><h3>{{ item.name }}</h3><p>{{ t('unitPrice') }} {{ t('currency') }}{{ money(item.price) }} · {{ t('stock') }} {{ item.stock }}</p><button class="remove-button" @click="removeCartItem(item)"><Trash2 :size="16" />{{ t('remove') }}</button></div>
-            <div class="quantity-control"><button @click="changeQuantity(item, -1)"><Minus :size="16" /></button><span>{{ item.quantity }}</span><button :disabled="item.quantity >= item.stock" @click="changeQuantity(item, 1)"><Plus :size="16" /></button></div>
+            <div class="quantity-control"><button @click="changeQuantity(item, -1)"><Minus :size="16" /></button><Transition name="quantity" mode="out-in"><span :key="item.quantity">{{ item.quantity }}</span></Transition><button :disabled="item.quantity >= item.stock" @click="changeQuantity(item, 1)"><Plus :size="16" /></button></div>
             <strong>{{ t('currency') }}{{ money(item.price * item.quantity) }}</strong>
           </article>
-        </section>
+        </TransitionGroup>
         <aside class="summary-card">
           <p class="eyebrow dark">{{ t('orderSubtotal') }}</p>
           <div><span>{{ t('itemCount') }}</span><strong>{{ cartCount }} {{ t('pieces') }}</strong></div>
@@ -717,12 +729,12 @@ onUnmounted(() => {
       </div>
     </main>
 
-    <main v-else-if="page === 'orders'" class="page-container">
+    <main v-else-if="page === 'orders'" key="orders" class="page-container">
       <div class="page-heading"><div><p class="eyebrow dark">{{ t('researchRecords') }}</p><h1>{{ t('purchaseHistory') }}</h1></div><button class="back-button" @click="goBrowse"><ArrowLeft :size="18" />{{ t('backToItems') }}</button></div>
       <div v-if="ordersBusy" class="state-card"><LoaderCircle class="spin" />{{ t('loadingOrders') }}</div>
       <div v-else-if="!orders.length" class="empty-state"><History :size="48" /><h2>{{ t('noOrders') }}</h2><p>{{ t('noOrdersText') }}</p></div>
       <section v-else class="order-list">
-        <article v-for="order in orders" :key="order.id" class="order-card">
+        <article v-for="(order, index) in orders" :key="order.id" class="order-card" :style="{ '--enter-delay': `${Math.min(index, 7) * 45}ms` }">
           <div class="order-head"><div><span>{{ order.order_no }}</span><p>{{ order.created_at }}</p></div><span class="status-pill"><CheckCircle2 :size="15" />{{ t('completed') }}</span></div>
           <div class="order-items">
             <div v-for="item in order.items" :key="item.id"><img :src="item.product_image" :alt="item.product_name" /><span>{{ item.product_name }} × {{ item.quantity }}</span><strong>{{ t('currency') }}{{ money(item.subtotal) }}</strong></div>
@@ -732,7 +744,7 @@ onUnmounted(() => {
       </section>
     </main>
 
-    <main v-else-if="page === 'chat-history'" class="page-container">
+    <main v-else-if="page === 'chat-history'" key="chat-history" class="page-container">
       <div class="page-heading">
         <div><p class="eyebrow dark">{{ t('yourChoices') }}</p><h1>{{ t('chatHistory') }}</h1></div>
         <button class="history-sort-button" type="button" @click="toggleChatHistorySort">
@@ -742,8 +754,8 @@ onUnmounted(() => {
       </div>
       <div v-if="chatHistoryBusy" class="state-card"><LoaderCircle class="spin" />{{ t('loadingChatHistory') }}</div>
       <div v-else-if="!chatHistoryGroups.length" class="empty-state"><MessageSquareText :size="48" /><h2>{{ t('noChatHistory') }}</h2><p>{{ t('noChatHistoryText') }}</p></div>
-      <section v-else class="chat-history-list">
-        <article v-for="conversation in chatHistoryGroups" :key="conversation.key" class="chat-history-card">
+      <TransitionGroup v-else name="history-list" tag="section" class="chat-history-list">
+        <article v-for="(conversation, index) in chatHistoryGroups" :key="conversation.key" class="chat-history-card" :style="{ '--enter-delay': `${Math.min(index, 7) * 45}ms` }">
           <header class="chat-history-head">
             <div>
               <p>{{ conversation.productName }}</p>
@@ -762,9 +774,12 @@ onUnmounted(() => {
             </div>
           </div>
         </article>
-      </section>
+      </TransitionGroup>
     </main>
 
+    </Transition>
+
+    <Transition name="modal">
     <div v-if="checkoutOpen" class="modal-backdrop" @click.self="checkoutOpen = false">
       <form class="modal-card" @submit.prevent="submitOrder">
         <button class="modal-close" type="button" :aria-label="t('close')" @click="checkoutOpen = false"><X /></button>
@@ -776,6 +791,7 @@ onUnmounted(() => {
         <button class="primary-button full" :disabled="checkoutBusy"><LoaderCircle v-if="checkoutBusy" :size="18" class="spin" />{{ t('confirmPurchase') }}</button>
       </form>
     </div>
+    </Transition>
 
     <Transition name="drawer">
       <div v-if="productDrawerOpen" class="drawer-backdrop" @click.self="closeProductDrawer">
@@ -784,8 +800,9 @@ onUnmounted(() => {
             <p class="eyebrow dark">{{ t('researchSample') }}</p>
             <button class="icon-button" type="button" :aria-label="t('close')" :title="t('close')" @click="closeProductDrawer"><X :size="20" /></button>
           </header>
-          <div v-if="productBusy" class="drawer-loading"><LoaderCircle class="spin" />{{ t('loadingProducts') }}</div>
-          <div v-else-if="selectedProduct" class="product-drawer-content">
+          <Transition name="drawer-content" mode="out-in">
+          <div v-if="productBusy" key="loading" class="drawer-loading"><LoaderCircle class="spin" />{{ t('loadingProducts') }}</div>
+          <div v-else-if="selectedProduct" key="product" class="product-drawer-content">
             <div class="detail-layout">
               <section class="detail-visual">
                 <div class="detail-image">
@@ -827,16 +844,18 @@ onUnmounted(() => {
               </section>
             </div>
           </div>
+          </Transition>
         </aside>
       </div>
     </Transition>
 
+    <Transition name="ai-drawer">
     <aside v-if="aiOpen" class="ai-drawer">
       <header :class="aiType"><div><span class="ai-avatar"><Store v-if="aiType === 'seller'" /><ShieldCheck v-else /></span><div><p>{{ aiType === 'seller' ? t('sellerView') : t('guardian') }}</p><h2>{{ aiType === 'seller' ? t('sellerAi') : t('guardianAi') }}</h2></div></div><button :aria-label="t('close')" @click="aiOpen = false"><X /></button></header>
       <div class="ai-context"><img :src="selectedProduct.image_url" :alt="selectedProduct.name" /><div><span>{{ t('discussing') }}</span><strong>{{ selectedProduct.name }}</strong></div></div>
       <div class="message-list">
         <div v-if="!aiMessages.length && !aiBusy" class="ai-empty"><MessageCircle :size="35" /><p>{{ aiType === 'seller' ? t('sellerEmpty') : t('guardianEmpty') }}</p></div>
-        <div v-for="(message, index) in aiMessages" :key="index" class="message" :class="message.role">
+        <div v-for="(message, index) in aiMessages" :key="index" class="message" :class="message.role" :style="{ '--enter-delay': `${Math.min(index, 6) * 35}ms` }">
           <span>{{ message.role === 'user' ? t('you') : (aiType === 'seller' ? t('sellerAi') : t('guardianAi')) }}</span>
           <p>{{ message.content }}</p>
           <div v-if="message.role === 'assistant' && selectedProduct" class="ai-nudge-components">
@@ -850,9 +869,11 @@ onUnmounted(() => {
       </div>
       <form class="ai-input" @submit.prevent="sendAiMessage"><textarea v-model="aiInput" rows="2" maxlength="800" :placeholder="aiType === 'seller' ? t('sellerPlaceholder') : t('guardianPlaceholder')" @keydown.enter.exact.prevent="sendAiMessage"></textarea><button :disabled="!aiInput.trim() || aiBusy">{{ t('send') }}</button></form>
     </aside>
+    </Transition>
 
     <Transition name="toast">
       <div v-if="toast.show" class="toast" :class="toast.kind"><CheckCircle2 v-if="toast.kind === 'success'" :size="19" /><X v-else :size="19" />{{ toast.message }}</div>
     </Transition>
   </div>
+  </Transition>
 </template>
