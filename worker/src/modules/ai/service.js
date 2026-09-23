@@ -136,15 +136,26 @@ export async function chat({ request, env }) {
   const message = String(body.message || '').trim();
   const aiType = String(body.aiType || '');
   const productId = String(body.productId || '');
+  const locale = body.locale === 'en' ? 'en' : 'zh';
   if (!message || message.length > 800) throw { status: 400, message: '问题长度应为 1–800 字' };
   if (!AI_TYPES.has(aiType)) throw { status: 400, message: 'AI 角色无效' };
 
-  const row = await env.nudge_mind_db.prepare('SELECT * FROM products WHERE id = ?').bind(productId).first();
+  const row = await env.nudge_mind_db.prepare(`
+    SELECT p.*,
+      COALESCE(pt.name, p.name) AS name,
+      COALESCE(pt.subtitle, p.subtitle) AS subtitle,
+      COALESCE(pt.description, p.description) AS description,
+      COALESCE(pt.specs_json, p.specs_json) AS specs_json,
+      COALESCE(pt.tags_json, p.tags_json) AS tags_json
+    FROM products p
+    LEFT JOIN product_translations pt ON pt.product_id = p.id AND pt.locale = ?
+    WHERE p.id = ?
+  `).bind(locale, productId).first();
   if (!row) throw { status: 404, message: '商品不存在' };
   const product = normalizeProduct(row);
-  const context = await loadConversationContext(env, user.userId, productId, aiType, product, message, request.signal);
-  const rawResponse = await completeChat(env, buildPrompt(aiType, product), [
-    ...summaryAsContextMessage(context.summary),
+  const context = await loadConversationContext(env, user.userId, productId, aiType, product, message, locale, request.signal);
+  const rawResponse = await completeChat(env, buildPrompt(aiType, product, locale), [
+    ...summaryAsContextMessage(context.summary, locale),
     ...context.history,
     { role: 'user', content: message },
   ], request.signal);
@@ -163,7 +174,7 @@ export async function chat({ request, env }) {
   return json({ response: aiResult.response, aiType, ...aiResult.ui });
 }
 
-async function loadConversationContext(env, userId, productId, aiType, product, nextMessage, signal) {
+async function loadConversationContext(env, userId, productId, aiType, product, nextMessage, locale, signal) {
   const summaryRow = await env.nudge_mind_db.prepare(`
     SELECT summary, summarized_until_rowid FROM ai_conversation_summaries
     WHERE user_id = ? AND product_id = ? AND ai_type = ?
@@ -189,8 +200,8 @@ async function loadConversationContext(env, userId, productId, aiType, product, 
   const { older, recent } = splitHistoryForSummary(history, recentLimit);
   if (!older.length) return { summary, history: stripRowId(history) };
 
-  const nextSummary = await completeChat(env, buildSummaryPrompt(aiType, product), [
-    ...summaryAsContextMessage(summary),
+  const nextSummary = await completeChat(env, buildSummaryPrompt(aiType, product, locale), [
+    ...summaryAsContextMessage(summary, locale),
     ...stripRowId(older),
   ], signal, { temperature: 0.2, maxTokens: 700 });
   const normalizedSummary = nextSummary.slice(0, MAX_SUMMARY_CHARS).trim();
@@ -209,9 +220,13 @@ async function loadConversationContext(env, userId, productId, aiType, product, 
   return { summary: normalizedSummary, history: stripRowId(recent) };
 }
 
-function summaryAsContextMessage(summary) {
+function summaryAsContextMessage(summary, locale) {
   const value = String(summary || '').trim();
-  return value ? [{ role: 'system', content: `以下是此前对话的摘要；将其作为背景信息，继续当前对话：\n${value}` }] : [];
+  if (!value) return [];
+  const instruction = locale === 'en'
+    ? `The following is a summary of the earlier conversation. Use it as context and continue the current conversation:\n${value}`
+    : `以下是此前对话的摘要；将其作为背景信息，继续当前对话：\n${value}`;
+  return [{ role: 'system', content: instruction }];
 }
 
 function splitHistoryForSummary(history, recentLimit) {

@@ -1,4 +1,5 @@
-export function buildPrompt(aiType, product) {
+export function buildPrompt(aiType, product, locale = 'zh') {
+  const language = locale === 'en' ? 'English' : '中文';
   const productFacts = JSON.stringify({
     name: product.name,
     subtitle: product.subtitle,
@@ -11,9 +12,9 @@ export function buildPrompt(aiType, product) {
     tags: product.tags,
   });
 
-  const responseFormat = `\n你必须只返回一个可解析的 JSON 对象，不要使用 Markdown 代码块或添加任何额外文字。格式如下：
+  const responseFormat = `\n所有面向用户的内容必须使用${language}。你必须只返回一个可解析的 JSON 对象，不要使用 Markdown 代码块或添加任何额外文字。格式如下：
 {
-  "response": "给用户看的中文回复，200 字以内",
+  "response": "给用户看的${language}回复，200 字以内",
   "add_to_cart": true,
   "scarcity": false,
   "social_proof": false,

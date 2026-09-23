@@ -545,6 +545,7 @@ async function sendAiMessage() {
       message,
       aiType: aiType.value,
       productId: selectedProduct.value.id,
+      locale: locale.value,
     });
     aiMessages.value.push({
       role: 'assistant',
