@@ -43,7 +43,7 @@ export async function getAdvisorRecommendations({ request, env }) {
   }));
   const rawResponse = await completeChat(env, buildAdvisorPrompt(catalog), [
     { role: 'user', content: requirement },
-  ], request.signal, { temperature: 0.3, maxTokens: 700 });
+  ], request.signal, { temperature: 0.3, maxTokens: 700, jsonOutput: true });
   const parsed = parseJsonObject(rawResponse);
   const byId = new Map(products.map((product) => [product.id, product]));
   const seen = new Set();
@@ -108,7 +108,7 @@ export async function getCheckoutGuardianIntervention({ request, env }) {
   });
   const rawResponse = await completeChat(env, buildCheckoutGuardianPrompt(items, locale), [
     { role: 'user', content: locale === 'en' ? 'Review this cart before checkout.' : '请在确认购买前审阅这个购物车。' },
-  ], request.signal, { temperature: 0.25, maxTokens: 1_400 });
+  ], request.signal, { temperature: 0.25, maxTokens: 1_400, jsonOutput: true });
   const parsed = parseJsonObject(rawResponse);
   const recommendations = new Map(
     Array.isArray(parsed?.items)
@@ -158,7 +158,7 @@ export async function chat({ request, env }) {
     ...summaryAsContextMessage(context.summary, locale),
     ...context.history,
     { role: 'user', content: message },
-  ], request.signal);
+  ], request.signal, { jsonOutput: true });
   const aiResult = parseAiResponse(rawResponse, product);
 
   await env.nudge_mind_db.batch([

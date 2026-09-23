@@ -13,6 +13,7 @@ export async function completeChat(env, systemPrompt, messages, signal, options 
         model: env.DEEPSEEK_MODEL || 'deepseek-chat',
         temperature: clampTemperature(options.temperature ?? env.AI_TEMPERATURE),
         max_tokens: clampMaxTokens(options.maxTokens, 500),
+        ...(options.jsonOutput ? { response_format: { type: 'json_object' } } : {}),
         messages: [{ role: 'system', content: systemPrompt }, ...messages],
       }),
       signal,
@@ -24,7 +25,9 @@ export async function completeChat(env, systemPrompt, messages, signal, options 
   const payload = await response.json().catch(() => null);
   const content = payload?.choices?.[0]?.message?.content;
   if (typeof content !== 'string' || !content.trim()) throw { status: 502, message: 'AI 服务未返回有效内容' };
-  return content.trim().slice(0, 2_000);
+  // Do not truncate here: a valid JSON response may exceed this limit, and
+  // truncating it before the caller parses it turns it into invalid JSON.
+  return content.trim();
 }
 
 function clampTemperature(value) {
