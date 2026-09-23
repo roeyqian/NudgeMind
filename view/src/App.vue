@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   ShoppingBag,
   ShoppingCart,
+  Sparkles,
   Star,
   Store,
   Sun,
@@ -64,6 +65,10 @@ const cart = ref([]);
 const cartBusy = ref(false);
 const checkoutOpen = ref(false);
 const checkoutBusy = ref(false);
+const checkoutGuardianBusy = ref(false);
+const checkoutGuardian = ref(null);
+const checkoutStage = ref('details');
+const checkoutRemovalBusy = ref('');
 const checkoutForm = reactive({ name: '', phone: '', address: '' });
 const orders = ref([]);
 const ordersBusy = ref(false);
@@ -77,6 +82,9 @@ const aiType = ref('seller');
 const aiMessages = ref([]);
 const aiInput = ref('');
 const aiBusy = ref(false);
+const advisorRequirement = ref('');
+const advisorBusy = ref(false);
+const advisorResult = ref(null);
 
 const toast = reactive({ show: false, message: '', kind: 'success' });
 let toastTimer;
@@ -228,6 +236,8 @@ function resetSession() {
   productDrawerOpen.value = false;
   productBusy.value = false;
   aiOpen.value = false;
+  advisorRequirement.value = '';
+  advisorResult.value = null;
   mobileNavOpen.value = false;
   page.value = 'browse';
 }
@@ -381,6 +391,50 @@ async function removeCartItem(item) {
   }
 }
 
+function openCheckout() {
+  checkoutGuardian.value = null;
+  checkoutStage.value = 'details';
+  checkoutOpen.value = true;
+}
+
+function closeCheckout() {
+  if (checkoutBusy.value || checkoutGuardianBusy.value || checkoutRemovalBusy.value) return;
+  checkoutOpen.value = false;
+}
+
+async function requestCheckoutGuardian() {
+  if (checkoutGuardianBusy.value) return;
+  checkoutGuardianBusy.value = true;
+  try {
+    checkoutGuardian.value = await AIAPI.checkoutGuardian(locale.value);
+    checkoutStage.value = 'guardian';
+  } catch (error) {
+    notify(error.message, 'error');
+  } finally {
+    checkoutGuardianBusy.value = false;
+  }
+}
+
+async function removeGuardianSuggestedItem(intervention) {
+  const item = cart.value.find((cartItem) => cartItem.id === intervention.cartItemId);
+  if (!item || checkoutRemovalBusy.value) return;
+  checkoutRemovalBusy.value = item.id;
+  try {
+    await CartAPI.remove(item.id);
+    cart.value = localizeItems((await CartAPI.get(locale.value)).items);
+    checkoutGuardian.value = {
+      ...checkoutGuardian.value,
+      items: checkoutGuardian.value.items.filter((entry) => entry.cartItemId !== item.id),
+    };
+    notify(t('removed'));
+    if (!cart.value.length) checkoutOpen.value = false;
+  } catch (error) {
+    notify(error.message, 'error');
+  } finally {
+    checkoutRemovalBusy.value = '';
+  }
+}
+
 async function submitOrder() {
   checkoutBusy.value = true;
   try {
@@ -422,6 +476,32 @@ async function showChatHistory() {
     notify(error.message, 'error');
   } finally {
     chatHistoryBusy.value = false;
+  }
+}
+
+function showAdvisor() {
+  closeProductDrawer();
+  page.value = 'advisor';
+}
+
+async function submitAdvisor() {
+  const requirement = advisorRequirement.value.trim();
+  if (!requirement || advisorBusy.value) return;
+  advisorBusy.value = true;
+  advisorResult.value = null;
+  try {
+    const result = await AIAPI.advisor({ requirement, locale: locale.value });
+    advisorResult.value = {
+      ...result,
+      recommendations: result.recommendations.map((item) => ({
+        ...item,
+        product: localizeCatalogItem(item.product, locale.value),
+      })),
+    };
+  } catch (error) {
+    notify(error.message, 'error');
+  } finally {
+    advisorBusy.value = false;
   }
 }
 
@@ -604,6 +684,7 @@ onUnmounted(() => {
         </button>
         <div id="main-nav-menu" class="main-nav-menu" :class="{ open: mobileNavOpen }">
           <button :class="{ active: page === 'browse' }" @click="goBrowse(); mobileNavOpen = false">{{ t('discover') }}</button>
+          <button :class="{ active: page === 'advisor' }" @click="showAdvisor(); mobileNavOpen = false"><Sparkles :size="17" />{{ t('advisor') }}</button>
           <button :class="{ active: page === 'orders' }" @click="showOrders(); mobileNavOpen = false"><History :size="17" />{{ t('purchaseHistory') }}</button>
           <button :class="{ active: page === 'chat-history' }" @click="showChatHistory(); mobileNavOpen = false"><MessageSquareText :size="17" />{{ t('chatHistory') }}</button>
         </div>
@@ -705,6 +786,40 @@ onUnmounted(() => {
       </section>
     </div>
 
+    <main v-else-if="page === 'advisor'" key="advisor" class="page-container advisor-page">
+      <div class="page-heading">
+        <div><p class="eyebrow dark">{{ t('advisorEyebrow') }}</p><h1>{{ t('advisor') }}</h1></div>
+        <button class="back-button" @click="goBrowse"><ArrowLeft :size="18" />{{ t('backToItems') }}</button>
+      </div>
+      <section class="advisor-intro">
+        <span class="advisor-icon"><Sparkles :size="25" /></span>
+        <div><h2>{{ t('advisorTitle') }}</h2><p>{{ t('advisorText') }}</p></div>
+      </section>
+      <form class="advisor-form" @submit.prevent="submitAdvisor">
+        <label>
+          <span>{{ t('advisorPrompt') }}</span>
+          <textarea v-model="advisorRequirement" rows="4" maxlength="800" :placeholder="t('advisorPlaceholder')" required></textarea>
+        </label>
+        <p class="advisor-disclosure"><ShieldCheck :size="16" />{{ t('advisorDisclosure') }}</p>
+        <button class="primary-button" :disabled="advisorBusy || !advisorRequirement.trim()"><LoaderCircle v-if="advisorBusy" :size="18" class="spin" /><Sparkles v-else :size="18" />{{ advisorBusy ? t('advisorMatching') : t('advisorSubmit') }}</button>
+      </form>
+      <section v-if="advisorResult" class="advisor-results" aria-live="polite">
+        <header><p class="eyebrow dark">{{ t('advisorResults') }}</p><p>{{ advisorResult.intro || t('advisorFallbackIntro') }}</p></header>
+        <div class="advisor-product-grid">
+          <article v-for="(item, index) in advisorResult.recommendations" :key="item.product.id" class="advisor-product-card" :style="{ '--enter-delay': `${index * 70}ms` }">
+            <img :src="item.product.image_url" :alt="item.product.name" />
+            <div class="advisor-product-copy">
+              <span class="advisor-rank">{{ t('advisorMatch', { number: index + 1 }) }}</span>
+              <h2>{{ item.product.name }}</h2>
+              <p>{{ item.reason || item.product.subtitle }}</p>
+              <div class="advisor-product-foot"><strong>{{ t('currency') }}{{ money(item.product.price) }}</strong><span>{{ t('stock') }} {{ item.product.stock }} {{ t('pieces') }}</span></div>
+              <div class="advisor-actions"><button class="text-button" type="button" @click="openProduct(item.product)">{{ t('advisorDetails') }}</button><button class="mini-cart" type="button" :disabled="item.product.stock < 1" :aria-label="t('addToCart')" @click="addToCart(item.product.id)"><Plus :size="20" /></button></div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
     <main v-else-if="page === 'cart'" key="cart" class="page-container">
       <div class="page-heading"><div><p class="eyebrow dark">{{ t('yourChoices') }}</p><h1>{{ t('cart') }}</h1></div><button class="back-button" @click="goBrowse"><ArrowLeft :size="18" />{{ t('continueBrowsing') }}</button></div>
       <div v-if="cartBusy" class="state-card"><LoaderCircle class="spin" />{{ t('loadingCart') }}</div>
@@ -723,7 +838,7 @@ onUnmounted(() => {
           <div><span>{{ t('itemCount') }}</span><strong>{{ cartCount }} {{ t('pieces') }}</strong></div>
           <div><span>{{ t('shipping') }}</span><strong>{{ t('currency') }}0.00</strong></div>
           <div class="summary-total"><span>{{ t('total') }}</span><strong>{{ t('currency') }}{{ money(cartTotal) }}</strong></div>
-          <button class="primary-button full" @click="checkoutOpen = true">{{ t('simulatedPurchase') }}</button>
+          <button class="primary-button full" @click="openCheckout">{{ t('simulatedPurchase') }}</button>
           <p>{{ t('noRealPayment') }}</p>
         </aside>
       </div>
@@ -780,16 +895,34 @@ onUnmounted(() => {
     </Transition>
 
     <Transition name="modal">
-    <div v-if="checkoutOpen" class="modal-backdrop" @click.self="checkoutOpen = false">
-      <form class="modal-card" @submit.prevent="submitOrder">
-        <button class="modal-close" type="button" :aria-label="t('close')" @click="checkoutOpen = false"><X /></button>
+    <div v-if="checkoutOpen" class="modal-backdrop" @click.self="closeCheckout">
+      <form v-if="checkoutStage === 'details'" class="modal-card" @submit.prevent="requestCheckoutGuardian">
+        <button class="modal-close" type="button" :aria-label="t('close')" @click="closeCheckout"><X /></button>
         <p class="eyebrow dark">{{ t('simulatedPurchase') }}</p><h2>{{ t('confirmInfo') }}</h2><p class="muted">{{ t('orderInfoOnly') }}</p>
         <label><span>{{ t('name') }}</span><input v-model.trim="checkoutForm.name" required maxlength="50" /></label>
         <label><span>{{ t('phone') }}</span><input v-model.trim="checkoutForm.phone" required maxlength="30" :placeholder="t('researchInfo')" /></label>
         <label><span>{{ t('address') }}</span><textarea v-model.trim="checkoutForm.address" required maxlength="200" rows="3" :placeholder="t('researchInfo')"></textarea></label>
         <div class="modal-total"><span>{{ t('paymentAmount') }}</span><strong>{{ t('currency') }}{{ money(cartTotal) }}</strong></div>
-        <button class="primary-button full" :disabled="checkoutBusy"><LoaderCircle v-if="checkoutBusy" :size="18" class="spin" />{{ t('confirmPurchase') }}</button>
+        <button class="primary-button full" :disabled="checkoutGuardianBusy"><LoaderCircle v-if="checkoutGuardianBusy" :size="18" class="spin" />{{ checkoutGuardianBusy ? t('guardianReviewing') : t('confirmPurchase') }}</button>
       </form>
+      <section v-else class="modal-card guardian-intervention" aria-live="polite">
+        <button class="modal-close" type="button" :aria-label="t('close')" @click="closeCheckout"><X /></button>
+        <p class="eyebrow dark">{{ t('guardianAi') }}</p>
+        <h2>{{ t('guardianInterventionTitle') }}</h2>
+        <p class="muted">{{ t('guardianInterventionIntro') }}</p>
+        <p class="guardian-overview">{{ checkoutGuardian?.message }}</p>
+        <div class="guardian-cart-items">
+          <article v-for="item in checkoutGuardian?.items" :key="item.cartItemId" class="guardian-cart-item">
+            <div><strong>{{ cart.find((cartItem) => cartItem.id === item.cartItemId)?.name }}</strong><p>{{ item.reason || t('guardianNeedsReview') }}</p></div>
+            <button v-if="item.shouldRemove" type="button" class="guardian-remove" :disabled="checkoutRemovalBusy === item.cartItemId" @click="removeGuardianSuggestedItem(item)"><LoaderCircle v-if="checkoutRemovalBusy === item.cartItemId" :size="16" class="spin" /><Trash2 v-else :size="16" />{{ t('guardianRemove') }}</button>
+            <span v-else class="guardian-keep">{{ t('guardianKeep') }}</span>
+          </article>
+        </div>
+        <div class="guardian-actions">
+          <button type="button" class="back-button" :disabled="checkoutBusy" @click="checkoutStage = 'details'">{{ t('guardianBack') }}</button>
+          <button type="button" class="primary-button" :disabled="checkoutBusy || !cart.length" @click="submitOrder"><LoaderCircle v-if="checkoutBusy" :size="18" class="spin" />{{ t('guardianContinue') }}</button>
+        </div>
+      </section>
     </div>
     </Transition>
 

@@ -81,6 +81,8 @@ export const OrderAPI = {
 
 export const AIAPI = {
   chat: (payload) => request('/ai/chat', { method: 'POST', body: JSON.stringify(payload) }),
+  advisor: (payload) => request('/ai/advisor', { method: 'POST', body: JSON.stringify(payload) }),
+  checkoutGuardian: (locale) => request('/ai/checkout-guardian', { method: 'POST', body: JSON.stringify({ locale }) }),
   allHistory: (locale) => request(`/ai/history/all${locale ? `?${new URLSearchParams({ locale })}` : ''}`),
   history: (productId, aiType) => {
     const query = new URLSearchParams({ productId, aiType }).toString();

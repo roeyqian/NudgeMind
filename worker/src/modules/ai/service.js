@@ -1,6 +1,6 @@
 import { createId, json, readJson, requireUser } from '../../app/http.js';
 import { normalizeProduct } from '../shop/service.js';
-import { buildPrompt } from './prompts.js';
+import { buildAdvisorPrompt, buildCheckoutGuardianPrompt, buildPrompt } from './prompts.js';
 import { buildSummaryPrompt } from './summary-prompt.js';
 import { completeChat } from './provider.js';
 
@@ -8,6 +8,127 @@ const AI_TYPES = new Set(['seller', 'guardian']);
 const DEFAULT_SUMMARY_THRESHOLD_CHARS = 10_000;
 const DEFAULT_RECENT_CONTEXT_CHARS = 4_000;
 const MAX_SUMMARY_CHARS = 3_000;
+
+export async function getAdvisorRecommendations({ request, env }) {
+  await requireUser(request, env);
+  const body = await readJson(request);
+  const requirement = String(body.requirement || '').trim();
+  const locale = body.locale === 'en' ? 'en' : 'zh';
+  if (!requirement || requirement.length > 800) throw { status: 400, message: '需求长度应为 1–800 字' };
+
+  const { results } = await env.nudge_mind_db.prepare(`
+    SELECT p.*, c.name AS category_name,
+      COALESCE(pt.name, p.name) AS name,
+      COALESCE(pt.subtitle, p.subtitle) AS subtitle,
+      COALESCE(pt.description, p.description) AS description,
+      COALESCE(pt.specs_json, p.specs_json) AS specs_json,
+      COALESCE(pt.tags_json, p.tags_json) AS tags_json
+    FROM products p
+    JOIN categories c ON c.id = p.category_id
+    LEFT JOIN product_translations pt ON pt.product_id = p.id AND pt.locale = ?
+    ORDER BY p.is_hot DESC, p.sales_count DESC, p.created_at DESC
+    LIMIT 100
+  `).bind(locale).all();
+  const products = results.map(normalizeProduct);
+  const catalog = products.map((product) => ({
+    id: product.id,
+    name: product.name,
+    subtitle: product.subtitle,
+    description: product.description,
+    category: product.category_name,
+    price: product.price,
+    stock: product.stock,
+    tags: product.tags,
+    specs: product.specs,
+  }));
+  const rawResponse = await completeChat(env, buildAdvisorPrompt(catalog), [
+    { role: 'user', content: requirement },
+  ], request.signal, { temperature: 0.3, maxTokens: 700 });
+  const parsed = parseJsonObject(rawResponse);
+  const byId = new Map(products.map((product) => [product.id, product]));
+  const seen = new Set();
+  const recommendations = Array.isArray(parsed?.recommendations)
+    ? parsed.recommendations.flatMap((item) => {
+      const product = byId.get(String(item?.product_id || ''));
+      if (!product || seen.has(product.id)) return [];
+      seen.add(product.id);
+      return [{ product, reason: String(item?.reason || '').trim().slice(0, 300) }];
+    }).slice(0, 3)
+    : [];
+  if (!recommendations.length) throw { status: 502, message: 'AI 未返回可用的商品匹配结果' };
+
+  return json({
+    intro: String(parsed?.intro || '').trim().slice(0, 600),
+    recommendations,
+  });
+}
+
+export async function getCheckoutGuardianIntervention({ request, env }) {
+  const { user } = await requireUser(request, env);
+  const body = await readJson(request);
+  const locale = body.locale === 'en' ? 'en' : 'zh';
+  const { results } = await env.nudge_mind_db.prepare(`
+    SELECT
+      ci.id AS cart_item_id,
+      ci.quantity,
+      p.id,
+      p.price,
+      p.original_price,
+      p.stock,
+      p.rating,
+      COALESCE(pt.name, p.name) AS name,
+      COALESCE(pt.subtitle, p.subtitle) AS subtitle,
+      COALESCE(pt.description, p.description) AS description,
+      COALESCE(pt.specs_json, p.specs_json) AS specs_json,
+      COALESCE(pt.tags_json, p.tags_json) AS tags_json
+    FROM cart_items ci
+    JOIN products p ON p.id = ci.product_id
+    LEFT JOIN product_translations pt ON pt.product_id = p.id AND pt.locale = ?
+    WHERE ci.user_id = ?
+    ORDER BY ci.added_at
+  `).bind(locale, user.userId).all();
+  if (!results.length) throw { status: 400, message: '购物车为空' };
+
+  const items = results.map((row) => {
+    const product = normalizeProduct(row);
+    return {
+      cartItemId: row.cart_item_id,
+      productId: product.id,
+      name: product.name,
+      quantity: Number(row.quantity),
+      price: product.price,
+      originalPrice: product.original_price,
+      stock: product.stock,
+      rating: product.rating,
+      subtitle: product.subtitle,
+      description: product.description,
+      specs: product.specs,
+      tags: product.tags,
+    };
+  });
+  const rawResponse = await completeChat(env, buildCheckoutGuardianPrompt(items, locale), [
+    { role: 'user', content: locale === 'en' ? 'Review this cart before checkout.' : '请在确认购买前审阅这个购物车。' },
+  ], request.signal, { temperature: 0.25, maxTokens: 1_400 });
+  const parsed = parseJsonObject(rawResponse);
+  const recommendations = new Map(
+    Array.isArray(parsed?.items)
+      ? parsed.items.map((item) => [String(item?.product_id || ''), item])
+      : [],
+  );
+
+  return json({
+    message: String(parsed?.message || rawResponse || '').trim().slice(0, 1_200),
+    items: items.map((item) => {
+      const recommendation = recommendations.get(item.productId);
+      return {
+        cartItemId: item.cartItemId,
+        productId: item.productId,
+        shouldRemove: Boolean(recommendation?.should_remove),
+        reason: String(recommendation?.reason || '').trim().slice(0, 500),
+      };
+    }),
+  });
+}
 
 export async function chat({ request, env }) {
   const { user } = await requireUser(request, env);
