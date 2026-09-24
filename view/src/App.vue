@@ -69,6 +69,7 @@ const checkoutGuardianBusy = ref(false);
 const checkoutGuardian = ref(null);
 const checkoutStage = ref('details');
 const checkoutRemovalBusy = ref('');
+const checkoutClearBusy = ref(false);
 const checkoutForm = reactive({ name: '', phone: '', address: '' });
 const orders = ref([]);
 const ordersBusy = ref(false);
@@ -398,7 +399,7 @@ function openCheckout() {
 }
 
 function closeCheckout() {
-  if (checkoutBusy.value || checkoutGuardianBusy.value || checkoutRemovalBusy.value) return;
+  if (checkoutBusy.value || checkoutGuardianBusy.value || checkoutRemovalBusy.value || checkoutClearBusy.value) return;
   checkoutOpen.value = false;
 }
 
@@ -417,7 +418,7 @@ async function requestCheckoutGuardian() {
 
 async function removeGuardianSuggestedItem(intervention) {
   const item = cart.value.find((cartItem) => cartItem.id === intervention.cartItemId);
-  if (!item || checkoutRemovalBusy.value) return;
+  if (!item || checkoutRemovalBusy.value || checkoutClearBusy.value) return;
   checkoutRemovalBusy.value = item.id;
   try {
     await CartAPI.remove(item.id);
@@ -435,7 +436,29 @@ async function removeGuardianSuggestedItem(intervention) {
   }
 }
 
+async function clearCheckoutCart() {
+  if (checkoutClearBusy.value || checkoutBusy.value || checkoutRemovalBusy.value) return;
+  checkoutClearBusy.value = true;
+  try {
+    for (const item of [...cart.value]) {
+      await CartAPI.remove(item.id);
+      cart.value = cart.value.filter((cartItem) => cartItem.id !== item.id);
+      checkoutGuardian.value = {
+        ...checkoutGuardian.value,
+        items: checkoutGuardian.value.items.filter((entry) => entry.cartItemId !== item.id),
+      };
+    }
+    checkoutOpen.value = false;
+    notify(t('removed'));
+  } catch (error) {
+    notify(error.message, 'error');
+  } finally {
+    checkoutClearBusy.value = false;
+  }
+}
+
 async function submitOrder() {
+  if (checkoutClearBusy.value || checkoutRemovalBusy.value) return;
   checkoutBusy.value = true;
   try {
     const result = await OrderAPI.create({ ...checkoutForm });
@@ -915,13 +938,13 @@ onUnmounted(() => {
         <div class="guardian-cart-items">
           <article v-for="item in checkoutGuardian?.items" :key="item.cartItemId" class="guardian-cart-item">
             <div><strong>{{ cart.find((cartItem) => cartItem.id === item.cartItemId)?.name }}</strong><p>{{ item.reason || t('guardianNeedsReview') }}</p></div>
-            <button v-if="item.shouldRemove" type="button" class="guardian-remove" :disabled="checkoutRemovalBusy === item.cartItemId" @click="removeGuardianSuggestedItem(item)"><LoaderCircle v-if="checkoutRemovalBusy === item.cartItemId" :size="16" class="spin" /><Trash2 v-else :size="16" />{{ t('guardianRemove') }}</button>
+            <button v-if="item.shouldRemove" type="button" class="guardian-remove" :disabled="!!checkoutRemovalBusy || checkoutClearBusy" @click="removeGuardianSuggestedItem(item)"><LoaderCircle v-if="checkoutRemovalBusy === item.cartItemId" :size="16" class="spin" /><Trash2 v-else :size="16" />{{ t('guardianRemove') }}</button>
             <span v-else class="guardian-keep">{{ t('guardianKeep') }}</span>
           </article>
         </div>
         <div class="guardian-actions">
-          <button type="button" class="back-button" :disabled="checkoutBusy" @click="checkoutStage = 'details'">{{ t('guardianBack') }}</button>
-          <button type="button" class="primary-button" :disabled="checkoutBusy || !cart.length" @click="submitOrder"><LoaderCircle v-if="checkoutBusy" :size="18" class="spin" />{{ t('guardianContinue') }}</button>
+          <button type="button" class="primary-button" :disabled="checkoutBusy || checkoutClearBusy || !!checkoutRemovalBusy || !cart.length" @click="clearCheckoutCart"><LoaderCircle v-if="checkoutClearBusy" :size="18" class="spin" />{{ t('guardianClearCart') }}</button>
+          <button type="button" class="back-button" :disabled="checkoutBusy || checkoutClearBusy || !!checkoutRemovalBusy || !cart.length" @click="submitOrder"><LoaderCircle v-if="checkoutBusy" :size="18" class="spin" />{{ t('guardianContinue') }}</button>
         </div>
       </section>
     </div>

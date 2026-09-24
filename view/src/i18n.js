@@ -20,7 +20,7 @@ Object.assign(messages.zh, {
   guardianNeedsReview: '管家未给出单独建议，请结合自己的需求、预算和已有物品判断。',
   guardianRemove: '移出购物车',
   guardianKeep: '可以保留，但请自行核对',
-  guardianBack: '返回修改信息',
+  guardianClearCart: '移除出购物车',
   guardianContinue: '仍然确认模拟购买',
 });
 
@@ -31,7 +31,7 @@ Object.assign(messages.en, {
   guardianNeedsReview: 'The guardian gave no item-specific advice. Check your needs, budget, and what you already own.',
   guardianRemove: 'Remove from cart',
   guardianKeep: 'You may keep it — verify it yourself',
-  guardianBack: 'Back to details',
+  guardianClearCart: 'Remove from cart',
   guardianContinue: 'Still confirm simulated purchase',
 });
 
