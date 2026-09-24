@@ -14,6 +14,9 @@ export const messages = {
 };
 
 Object.assign(messages.zh, {
+  deleteChat: '删除对话',
+  deleteChatConfirm: '确定删除“{product}”与{ai}的整段对话吗？删除后无法恢复。',
+  chatDeleted: '对话已删除',
   guardianReviewing: '管家正在审阅购物车…',
   guardianInterventionTitle: '购买前，和消费管家再核对一次',
   guardianInterventionIntro: '以下建议只基于购物车中的商品事实；是否移除或继续购买，仍由你决定。',
@@ -25,6 +28,9 @@ Object.assign(messages.zh, {
 });
 
 Object.assign(messages.en, {
+  deleteChat: 'Delete conversation',
+  deleteChatConfirm: 'Delete the entire conversation about “{product}” with {ai}? This cannot be undone.',
+  chatDeleted: 'Conversation deleted',
   guardianReviewing: 'The guardian is reviewing your cart…',
   guardianInterventionTitle: 'Check once more with your purchase guardian',
   guardianInterventionIntro: 'These suggestions use only the facts in your cart. Removing items or continuing is still your choice.',

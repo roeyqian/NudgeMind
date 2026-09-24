@@ -275,6 +275,22 @@ export async function getHistory({ request, env, url }) {
   })) });
 }
 
+export async function deleteHistory({ request, env, url }) {
+  const { user } = await requireUser(request, env);
+  const productId = String(url.searchParams.get('productId') || '');
+  const aiType = String(url.searchParams.get('aiType') || '');
+  if (!productId || !AI_TYPES.has(aiType)) throw { status: 400, message: '缺少有效的商品或 AI 角色' };
+  await env.nudge_mind_db.batch([
+    env.nudge_mind_db.prepare(`
+      DELETE FROM ai_conversations WHERE user_id = ? AND product_id = ? AND ai_type = ?
+    `).bind(user.userId, productId, aiType),
+    env.nudge_mind_db.prepare(`
+      DELETE FROM ai_conversation_summaries WHERE user_id = ? AND product_id = ? AND ai_type = ?
+    `).bind(user.userId, productId, aiType),
+  ]);
+  return json({ success: true });
+}
+
 export async function getAllHistory({ request, env, url }) {
   const { user } = await requireUser(request, env);
   const locale = url.searchParams.get('locale') === 'en' ? 'en' : 'zh';

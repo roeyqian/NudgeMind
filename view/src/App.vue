@@ -76,6 +76,7 @@ const ordersBusy = ref(false);
 const chatHistory = ref([]);
 const chatHistoryBusy = ref(false);
 const chatHistorySort = ref('desc');
+const chatHistoryDeleteBusy = ref('');
 const mobileNavOpen = ref(false);
 
 const aiOpen = ref(false);
@@ -158,6 +159,7 @@ const chatHistoryGroups = computed(() => {
     if (!groups.has(key)) {
       groups.set(key, {
         key,
+        productId: message.productId,
         productName: translateCatalogText(message.productName, locale.value),
         aiType: message.aiType,
         latestTimestamp: message.timestamp,
@@ -532,6 +534,20 @@ function toggleChatHistorySort() {
   chatHistorySort.value = chatHistorySort.value === 'desc' ? 'asc' : 'desc';
 }
 
+async function deleteChatHistory(conversation) {
+  if (chatHistoryDeleteBusy.value || !window.confirm(t('deleteChatConfirm', { product: conversation.productName, ai: conversation.aiType === 'seller' ? t('sellerAi') : t('guardianAi') }))) return;
+  chatHistoryDeleteBusy.value = conversation.key;
+  try {
+    await AIAPI.deleteHistory(conversation.productId, conversation.aiType);
+    chatHistory.value = chatHistory.value.filter((message) => message.productId !== conversation.productId || message.aiType !== conversation.aiType);
+    notify(t('chatDeleted'));
+  } catch (error) {
+    notify(error.message, 'error');
+  } finally {
+    chatHistoryDeleteBusy.value = '';
+  }
+}
+
 function formatHistoryTime(value) {
   const normalized = String(value || '').includes('T') ? value : `${value || ''}`.replace(' ', 'T') + 'Z';
   const date = new Date(normalized);
@@ -904,7 +920,11 @@ onUnmounted(() => {
                 {{ conversation.aiType === 'seller' ? t('sellerAi') : t('guardianAi') }}
               </span>
             </div>
-            <MessageCircle :size="19" />
+            <button class="chat-history-delete" type="button" :disabled="Boolean(chatHistoryDeleteBusy)" @click="deleteChatHistory(conversation)">
+              <LoaderCircle v-if="chatHistoryDeleteBusy === conversation.key" class="spin" :size="16" />
+              <Trash2 v-else :size="16" />
+              {{ t('deleteChat') }}
+            </button>
           </header>
           <div class="chat-history-messages">
             <div v-for="(message, index) in conversation.messages" :key="`${conversation.key}-${index}`" class="history-message" :class="message.role">

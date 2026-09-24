@@ -264,6 +264,9 @@ input:focus, textarea:focus { border-color: #ad3c4b; box-shadow: 0 0 0 3px rgba(
 .chat-history-card { overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); animation: content-enter .36s both; animation-delay: var(--enter-delay, 0ms); }
 .chat-history-head { display: flex; align-items: center; justify-content: space-between; padding: 17px 20px; color: #7d2936; background: #f7f5ef; }
 .chat-history-head p { margin: 0 0 4px; color: var(--ink); font-weight: 700; }
+.chat-history-delete { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; border: 1px solid #c87984; border-radius: 9px; padding: 8px 10px; color: #7d2936; background: transparent; font-size: 12px; font-weight: 700; transition: background .18s ease; }
+.chat-history-delete:hover { background: #f9e5e7; }
+.chat-history-delete:disabled { cursor: wait; opacity: .55; }
 .history-ai-type { display: inline-flex; align-items: center; gap: 5px; border: 1px solid; border-radius: 999px; padding: 5px 9px; font-size: 13px; font-weight: 800; line-height: 1; }
 .history-ai-type.seller { border-color: #d1a35c; color: #7d4d12; background: #fff4dc; }
 .history-ai-type.guardian { border-color: #c87984; color: #7d2936; background: #f9e5e7; }
@@ -446,6 +449,8 @@ input:focus, textarea:focus { border-color: #ad3c4b; box-shadow: 0 0 0 3px rgba(
 :root[data-theme='dark'] .quantity-control button { background: #303136; }
 :root[data-theme='dark'] .order-head { background: #2b2c30; }
 :root[data-theme='dark'] .chat-history-head { background: #2b2c30; }
+:root[data-theme='dark'] .chat-history-delete { color: #f2afb7; border-color: #8b525d; }
+:root[data-theme='dark'] .chat-history-delete:hover { background: #3b252b; }
 :root[data-theme='dark'] .history-sort-button { border-color: #4c4b50; }
 :root[data-theme='dark'] .history-ai-type.seller { border-color: #8e7547; color: #f0cb85; background: #352d20; }
 :root[data-theme='dark'] .history-ai-type.guardian { border-color: #8b525d; color: #f2afb7; background: #3b252b; }

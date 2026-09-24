@@ -88,4 +88,8 @@ export const AIAPI = {
     const query = new URLSearchParams({ productId, aiType }).toString();
     return request(`/ai/history?${query}`);
   },
+  deleteHistory: (productId, aiType) => {
+    const query = new URLSearchParams({ productId, aiType }).toString();
+    return request(`/ai/history?${query}`, { method: 'DELETE' });
+  },
 };
