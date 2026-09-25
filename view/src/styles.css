@@ -348,7 +348,7 @@ input:focus, textarea:focus { border-color: #ad3c4b; box-shadow: 0 0 0 3px rgba(
 .guardian-keep { flex: 0 0 auto; color: #547460; font-size: 11px; font-weight: 700; text-align: right; }
 .guardian-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
 .guardian-actions .primary-button { min-height: 42px; }
-.toast { position: fixed; z-index: 100; left: 50%; bottom: 28px; display: flex; align-items: center; gap: 8px; border-radius: 13px; padding: 12px 17px; color: #fff; background: #8c1d2c; box-shadow: 0 12px 35px rgba(0,0,0,.2); transform: translateX(-50%); font-size: 13px; }
+.toast { position: fixed; z-index: 100; left: 50%; bottom: 28px; display: flex; align-items: center; gap: 8px; max-width: min(700px, calc(100vw - 32px)); border-radius: 13px; padding: 12px 17px; color: #fff; background: #8c1d2c; box-shadow: 0 12px 35px rgba(0,0,0,.2); transform: translateX(-50%); font-size: 13px; overflow-wrap: anywhere; }
 .toast.error { background: #9c4436; }
 .toast-enter-active, .toast-leave-active { transition: .2s; }.toast-enter-from, .toast-leave-to { opacity: 0; transform: translate(-50%, 12px); }
 

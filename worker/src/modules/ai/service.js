@@ -205,7 +205,7 @@ export async function chat({ request, env }) {
     ...summaryAsContextMessage(context.summary, locale),
     ...context.history,
     { role: 'user', content: message },
-  ], request.signal, { jsonOutput: true });
+  ], request.signal, { jsonOutput: true, maxTokens: 900 });
   const aiResult = parseAiResponse(rawResponse, product);
   const assistantMessageId = createId('message');
   const patterns = aiType === 'seller' ? detectSellerPatterns(aiResult, product, locale) : [];
@@ -375,7 +375,7 @@ export async function getAllHistory({ request, env, url }) {
 function parseAiResponse(rawResponse, product) {
   const parsed = parseJsonObject(rawResponse);
   const response = String(parsed?.response || rawResponse || '').trim().slice(0, 2_000);
-  if (!response) throw { status: 502, message: 'AI 服务未返回有效内容' };
+  if (!response) throw { status: 502, code: 'AI_EMPTY_RESPONSE', message: 'AI 服务未返回有效内容' };
 
   const stock = Number(product.stock || 0);
   const salesCount = Number(product.sales_count || 0);

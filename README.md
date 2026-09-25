@@ -39,11 +39,16 @@ npm run db:seed:local
 ```
 
 如需 AI，在 Worker Secret 中设置 `DEEPSEEK_API_KEY`；也可通过变量设置 `DEEPSEEK_BASE_URL`、`DEEPSEEK_MODEL` 和 `AI_TEMPERATURE`。
+当前默认模型为 `deepseek-flash`。如果线上 Worker 的 `DEEPSEEK_MODEL` 是旧模型名，部署时也应更新该变量。
 
 ```powershell
 npx wrangler secret put DEEPSEEK_API_KEY
 npm run dev
 ```
+
+## AI 请求失败排查
+
+聊天报错会显示 HTTP 状态、应用错误码和请求 ID；DeepSeek 返回错误时，还会显示其状态和错误详情。`AI_UPSTREAM_401` 表示上游 API Key 无效，`AI_UPSTREAM_402` 表示余额不足，`AI_UPSTREAM_422` 通常要检查模型名或请求参数，`AI_UPSTREAM_429` 表示限流，`AI_UPSTREAM_500` / `AI_UPSTREAM_503` 表示上游暂时故障或过载。`AI_OUTPUT_TRUNCATED` 表示模型回答超过输出长度，`INTERNAL_ERROR` 表示 Worker 内部或数据库错误，应使用请求 ID 在 Worker 日志中定位。连接失败及 429/5xx 上游错误会在单次聊天请求内最多重试两次；配置和额度错误不会重试。
 
 ## AI 上下文摘要
 

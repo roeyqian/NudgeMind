@@ -37,7 +37,14 @@ export async function handleApi(request, env, url, router, context = {}) {
   } catch (error) {
     const status = normalizeStatus(error?.status);
     if (status >= 500) console.error('Nudge Mind API error', { requestId, path: url.pathname, error });
-    return withCors(json({ error: status >= 500 ? '服务器暂时无法处理请求' : String(error?.message || '请求失败'), requestId }, status));
+    const knownError = typeof error?.code === 'string';
+    return withCors(json({
+      error: status >= 500 && !knownError ? '服务器内部错误，请凭请求 ID 联系管理员' : String(error?.message || '请求失败'),
+      code: knownError ? error.code : status >= 500 ? 'INTERNAL_ERROR' : 'REQUEST_ERROR',
+      requestId,
+      ...(Number.isInteger(error?.upstreamStatus) ? { upstreamStatus: error.upstreamStatus } : {}),
+      ...(typeof error?.upstreamCode === 'string' ? { upstreamCode: error.upstreamCode } : {}),
+    }, status), { 'x-request-id': requestId });
   }
 }
 

@@ -192,7 +192,7 @@ function notify(message, kind = 'success') {
   toast.message = message;
   toast.kind = kind;
   toast.show = true;
-  toastTimer = setTimeout(() => { toast.show = false; }, 2600);
+  toastTimer = setTimeout(() => { toast.show = false; }, kind === 'error' ? 10000 : 2600);
 }
 
 async function submitAuth() {

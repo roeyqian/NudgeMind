@@ -23,14 +23,19 @@ export const session = {
 };
 
 async function request(path, options = {}) {
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(session.token ? { Authorization: `Bearer ${session.token}` } : {}),
-      ...(options.headers || {}),
-    },
-  });
+  let response;
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(session.token ? { Authorization: `Bearer ${session.token}` } : {}),
+        ...(options.headers || {}),
+      },
+    });
+  } catch {
+    throw new Error('网络连接失败（NETWORK_ERROR），请检查连接后重试');
+  }
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -38,7 +43,8 @@ async function request(path, options = {}) {
       session.clear();
       window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT));
     }
-    throw new Error(data.error || `请求失败（${response.status}）`);
+    const details = [`HTTP ${response.status}`, data.code, data.upstreamCode ? `上游 ${data.upstreamCode}` : '', data.requestId ? `请求 ID ${data.requestId}` : ''].filter(Boolean).join(' · ');
+    throw new Error(`${data.error || `请求失败（${response.status}）`}（${details}）`);
   }
   return data;
 }

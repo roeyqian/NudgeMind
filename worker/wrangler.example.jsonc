@@ -26,7 +26,7 @@
   },
   "vars": {
     "DEEPSEEK_BASE_URL": "https://api.deepseek.com",
-    "DEEPSEEK_MODEL": "deepseek-chat",
+    "DEEPSEEK_MODEL": "deepseek-flash",
     "AI_TEMPERATURE": "0.5",
     "AI_CONTEXT_SUMMARY_THRESHOLD": "10000",
     "AI_CONTEXT_RECENT_CHARS": "4000"
