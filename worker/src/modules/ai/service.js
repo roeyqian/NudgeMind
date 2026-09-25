@@ -75,6 +75,7 @@ export async function getCheckoutGuardianIntervention({ request, env }) {
       p.price,
       p.original_price,
       p.stock,
+      p.sales_count,
       p.rating,
       COALESCE(pt.name, p.name) AS name,
       COALESCE(pt.subtitle, p.subtitle) AS subtitle,
@@ -88,6 +89,46 @@ export async function getCheckoutGuardianIntervention({ request, env }) {
     ORDER BY ci.added_at
   `).bind(locale, user.userId).all();
   if (!results.length) throw { status: 400, message: '购物车为空' };
+
+  const [sellerMessages, storedPatterns] = await Promise.all([
+    env.nudge_mind_db.prepare(`
+      SELECT ac.id, ac.product_id, ac.content
+      FROM ai_conversations ac
+      JOIN cart_items ci ON ci.product_id = ac.product_id AND ci.user_id = ac.user_id
+      WHERE ac.user_id = ? AND ac.ai_type = 'seller' AND ac.role = 'assistant'
+      ORDER BY ac.timestamp DESC, ac.rowid DESC
+    `).bind(user.userId).all(),
+    env.nudge_mind_db.prepare(`
+      SELECT pe.product_id, pe.message_id, pe.pattern_type, pe.evidence_text
+      FROM pattern_events pe
+      JOIN ai_conversations ac ON ac.id = pe.message_id
+      JOIN cart_items ci ON ci.product_id = pe.product_id AND ci.user_id = pe.user_id
+      WHERE pe.user_id = ? AND ac.ai_type = 'seller' AND ac.role = 'assistant'
+      ORDER BY pe.created_at DESC, pe.rowid DESC
+    `).bind(user.userId).all(),
+  ]);
+  const messagesByProduct = new Map();
+  for (const message of sellerMessages.results) {
+    const list = messagesByProduct.get(message.product_id) || [];
+    list.push(message);
+    messagesByProduct.set(message.product_id, list);
+  }
+  const patternsByProduct = new Map();
+  for (const event of storedPatterns.results) {
+    const list = patternsByProduct.get(event.product_id) || [];
+    list.push({ type: event.pattern_type, evidenceText: event.evidence_text, messageId: event.message_id });
+    patternsByProduct.set(event.product_id, list);
+  }
+  // Older seller replies predate pattern_events; still surface their exact wording at checkout.
+  for (const message of sellerMessages.results) {
+    const list = patternsByProduct.get(message.product_id) || [];
+    for (const pattern of detectPatternSentences(message.content)) {
+      if (!list.some((entry) => entry.messageId === message.id && entry.type === pattern.type && entry.evidenceText === pattern.evidenceText)) {
+        list.push({ ...pattern, messageId: message.id });
+      }
+    }
+    patternsByProduct.set(message.product_id, list);
+  }
 
   const items = results.map((row) => {
     const product = normalizeProduct(row);
@@ -104,6 +145,9 @@ export async function getCheckoutGuardianIntervention({ request, env }) {
       description: product.description,
       specs: product.specs,
       tags: product.tags,
+      hasSellerChat: (messagesByProduct.get(product.id) || []).length > 0,
+      sellerPatterns: (patternsByProduct.get(product.id) || []).slice(0, 12),
+      productPatterns: getProductPatterns(product, locale),
     };
   });
   const rawResponse = await completeChat(env, buildCheckoutGuardianPrompt(items, locale), [
@@ -125,6 +169,9 @@ export async function getCheckoutGuardianIntervention({ request, env }) {
         productId: item.productId,
         shouldRemove: Boolean(recommendation?.should_remove),
         reason: String(recommendation?.reason || '').trim().slice(0, 500),
+        hasSellerChat: item.hasSellerChat,
+        sellerPatterns: item.sellerPatterns,
+        productPatterns: item.productPatterns,
       };
     }),
   });
@@ -160,6 +207,8 @@ export async function chat({ request, env }) {
     { role: 'user', content: message },
   ], request.signal, { jsonOutput: true });
   const aiResult = parseAiResponse(rawResponse, product);
+  const assistantMessageId = createId('message');
+  const patterns = aiType === 'seller' ? detectSellerPatterns(aiResult, product, locale) : [];
 
   await env.nudge_mind_db.batch([
     env.nudge_mind_db.prepare(`
@@ -169,7 +218,11 @@ export async function chat({ request, env }) {
     env.nudge_mind_db.prepare(`
       INSERT INTO ai_conversations (id, user_id, ai_type, role, content, metadata_json, product_id, timestamp)
       VALUES (?, ?, ?, 'assistant', ?, ?, ?, datetime('now'))
-    `).bind(createId('message'), user.userId, aiType, aiResult.response, JSON.stringify(aiResult.ui), productId),
+    `).bind(assistantMessageId, user.userId, aiType, aiResult.response, JSON.stringify(aiResult.ui), productId),
+    ...patterns.map((pattern) => env.nudge_mind_db.prepare(`
+      INSERT INTO pattern_events (id, user_id, product_id, message_id, pattern_type, evidence_text)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).bind(createId('pattern'), user.userId, productId, assistantMessageId, pattern.type, pattern.evidenceText)),
   ]);
   return json({ response: aiResult.response, aiType, ...aiResult.ui });
 }
@@ -337,6 +390,62 @@ function parseAiResponse(rawResponse, product) {
       price_anchor: Boolean(parsed?.price_anchor) && originalPrice > price,
     },
   };
+}
+
+const PATTERN_MATCHERS = {
+  scarcity: /仅剩|只剩|库存紧张|库存不多|快(?:要)?售罄|所剩无几|limited stock|only\s+\d+\s+(?:items?\s+)?left|almost sold out/iu,
+  social_proof: /(?:已有|很多|许多|不少|大量).{0,18}(?:人|位|用户|顾客).{0,18}(?:购买|买了|下单|选择)|热销|畅销|best.?sell|popular choice|people (?:have )?bought/iu,
+  price_anchor: /原价|划线价|参考价|现价|折扣|立省|省下|original price|regular price|was\s*[¥$£]?\s*\d|now\s*[¥$£]?\s*\d|save\s*[¥$£]?\s*\d/iu,
+};
+
+function detectPatternSentences(content) {
+  const sentences = String(content || '').split(/(?<=[。！？!?\n])|(?<=[.!?])\s+/u)
+    .map((sentence) => sentence.trim()).filter(Boolean);
+  return sentences.flatMap((evidenceText) => Object.entries(PATTERN_MATCHERS)
+    .filter(([, matcher]) => matcher.test(evidenceText))
+    .map(([type]) => ({ type, evidenceText })));
+}
+
+function detectSellerPatterns(aiResult, product, locale) {
+  const patterns = detectPatternSentences(aiResult.response);
+  const ui = aiResult.ui;
+  const english = locale === 'en';
+  const displayedPrompts = [
+    ui.scarcity && { type: 'scarcity', evidenceText: english
+      ? `Low stock: only ${product.stock} left` : `库存紧张：仅剩 ${product.stock} 件` },
+    ui.social_proof && { type: 'social_proof', evidenceText: english
+      ? `${product.sales_count} people have bought this item` : `已有 ${product.sales_count} 人购买这件商品` },
+    ui.price_anchor && { type: 'price_anchor', evidenceText: english
+      ? `Was ¥${formatPrice(product.original_price)}; now ¥${formatPrice(product.price)}`
+      : `参考原价 ¥${formatPrice(product.original_price)}，当前 ¥${formatPrice(product.price)}` },
+  ].filter(Boolean);
+  return [...patterns, ...displayedPrompts].filter((pattern, index, all) =>
+    all.findIndex((candidate) => candidate.type === pattern.type && candidate.evidenceText === pattern.evidenceText) === index);
+}
+
+function getProductPatterns(product, locale) {
+  const english = locale === 'en';
+  const patterns = [product.subtitle, product.description, ...(Array.isArray(product.tags) ? product.tags : [])]
+    .flatMap(detectPatternSentences);
+  if (Number(product.stock) >= 1 && Number(product.stock) <= 5) {
+    patterns.push({ type: 'scarcity', evidenceText: english
+      ? `In stock: ${product.stock}` : `库存 ${product.stock} 件` });
+  }
+  if (Number(product.sales_count) > 0) {
+    patterns.push({ type: 'social_proof', evidenceText: english
+      ? `${product.sales_count} followers` : `${product.sales_count} 人关注` });
+  }
+  if (Number(product.original_price) > Number(product.price)) {
+    patterns.push({ type: 'price_anchor', evidenceText: english
+      ? `¥${formatPrice(product.price)} (was ¥${formatPrice(product.original_price)})`
+      : `¥${formatPrice(product.price)}（原价 ¥${formatPrice(product.original_price)}）` });
+  }
+  return patterns.filter((pattern, index, all) =>
+    all.findIndex((candidate) => candidate.type === pattern.type && candidate.evidenceText === pattern.evidenceText) === index);
+}
+
+function formatPrice(value) {
+  return Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function parseStoredUi(value) {

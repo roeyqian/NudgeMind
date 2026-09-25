@@ -957,7 +957,25 @@ onUnmounted(() => {
         <p class="guardian-overview">{{ checkoutGuardian?.message }}</p>
         <div class="guardian-cart-items">
           <article v-for="item in checkoutGuardian?.items" :key="item.cartItemId" class="guardian-cart-item">
-            <div><strong>{{ cart.find((cartItem) => cartItem.id === item.cartItemId)?.name }}</strong><p>{{ item.reason || t('guardianNeedsReview') }}</p></div>
+            <div class="guardian-item-content">
+              <strong>{{ cart.find((cartItem) => cartItem.id === item.cartItemId)?.name }}</strong>
+              <p>{{ item.reason || t('guardianNeedsReview') }}</p>
+              <div class="guardian-patterns">
+                <strong>{{ t('guardianFoundPrompts') }}</strong>
+                <p>{{ item.hasSellerChat ? t('guardianSellerChatFound') : t('guardianNoSellerChat') }}</p>
+                <p v-if="!item.sellerPatterns.length && !item.productPatterns.length">{{ t('guardianNoPatterns') }}</p>
+                <div v-for="(pattern, index) in item.sellerPatterns" :key="`seller-${pattern.messageId}-${index}`" class="guardian-pattern">
+                  <span>{{ t('guardianSellerPrompt') }} · {{ t(`guardianPattern_${pattern.type}`) }}</span>
+                  <p>{{ t(`guardianPatternAdvice_${pattern.type}`) }}</p>
+                  <details><summary>{{ t('guardianSeeQuote') }}</summary><q>{{ pattern.evidenceText }}</q></details>
+                </div>
+                <div v-for="(pattern, index) in item.productPatterns" :key="`product-${pattern.type}-${index}`" class="guardian-pattern">
+                  <span>{{ t('guardianProductPrompt') }} · {{ t(`guardianPattern_${pattern.type}`) }}</span>
+                  <p>{{ t(`guardianPatternAdvice_${pattern.type}`) }}</p>
+                  <details><summary>{{ t('guardianSeeBasis') }}</summary><q>{{ pattern.evidenceText }}</q></details>
+                </div>
+              </div>
+            </div>
             <button v-if="item.shouldRemove" type="button" class="guardian-remove" :disabled="!!checkoutRemovalBusy || checkoutClearBusy" @click="removeGuardianSuggestedItem(item)"><LoaderCircle v-if="checkoutRemovalBusy === item.cartItemId" :size="16" class="spin" /><Trash2 v-else :size="16" />{{ t('guardianRemove') }}</button>
             <span v-else class="guardian-keep">{{ t('guardianKeep') }}</span>
           </article>
