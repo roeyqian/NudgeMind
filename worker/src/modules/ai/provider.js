@@ -41,9 +41,6 @@ export async function completeChat(env, systemPrompt, messages, signal, options 
     }
     const payload = await response.json().catch(() => null);
     const content = payload?.choices?.[0]?.message?.content;
-    if (payload?.choices?.[0]?.finish_reason === 'length') {
-      throw { status: 502, code: 'AI_OUTPUT_TRUNCATED', message: 'AI 输出超过长度限制，回答不完整' };
-    }
     if (typeof content !== 'string' || !content.trim()) {
       throw { status: 502, code: 'AI_EMPTY_RESPONSE', message: 'AI 服务未返回有效内容' };
     }

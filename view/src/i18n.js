@@ -119,3 +119,67 @@ export function localizeImageUrl(imageUrl, locale) {
   const withoutLocale = imageUrl.replace(/([?&])locale=[^&]*/u, '');
   return `${withoutLocale}${withoutLocale.includes('?') ? '&' : '?'}locale=${locale}`;
 }
+
+const englishApiErrors = {
+  '接口不存在': 'API endpoint not found',
+  '请求内容不是有效的 JSON': 'Request body is not valid JSON',
+  '请先登录': 'Please sign in first',
+  '登录已过期': 'Your session has expired',
+  '用户名长度应为 2–40 位': 'Username must be 2–40 characters long',
+  '请输入有效邮箱': 'Please enter a valid email address',
+  '密码长度应为 8–128 位': 'Password must be 8–128 characters long',
+  '用户名或邮箱已存在': 'Username or email already exists',
+  '请输入用户名和密码': 'Please enter your username and password',
+  '用户名或密码错误': 'Incorrect username or password',
+  '商品不存在': 'Product not found',
+  '购物车商品不存在': 'Cart item not found',
+  '商品库存不足': 'Insufficient product stock',
+  '购物车为空': 'Your cart is empty',
+  '商品数量必须是 1–99 的整数': 'Quantity must be an integer from 1 to 99',
+  '请填写购买信息': 'Please enter purchase details',
+  '姓名、联系电话和地址均不能为空': 'Name, phone number, and address are required',
+  '购买信息长度超出限制': 'Purchase details exceed the length limit',
+  '需求长度应为 1–800 字': 'Your requirements must be 1–800 characters long',
+  '问题长度应为 1–800 字': 'Your question must be 1–800 characters long',
+  '请填写需求': 'Please enter your requirements',
+  '请输入问题': 'Please enter a question',
+  'AI 角色无效': 'Invalid AI role',
+  '缺少有效的商品或 AI 角色': 'A valid product and AI role are required',
+  'AI 未返回可用的商品匹配结果': 'AI did not return any usable product matches',
+  'AI 对话摘要未返回有效内容': 'AI did not return a valid conversation summary',
+  '请求已取消': 'Request cancelled',
+};
+
+const englishAiErrors = {
+  AI_NOT_CONFIGURED: 'AI service has no API key configured',
+  AI_CONNECTION_FAILED: 'Could not connect to the AI service. Check the connection or provider status',
+  AI_OUTPUT_TRUNCATED: 'AI output exceeded the length limit, so the answer is incomplete',
+  AI_EMPTY_RESPONSE: 'AI service did not return valid content',
+  INTERNAL_ERROR: 'Internal server error. Contact an administrator with the request ID',
+};
+
+const englishUpstreamReasons = {
+  400: 'invalid request format',
+  401: 'invalid API key',
+  402: 'insufficient AI account balance',
+  422: 'invalid model or parameters',
+  429: 'rate limit reached',
+  500: 'internal error',
+  503: 'service busy',
+};
+
+export function localizeApiError(data, status, locale) {
+  if (locale !== 'en') return data.error || `请求失败（${status}）`;
+  const code = typeof data.code === 'string' ? data.code : '';
+  if (code.startsWith('AI_UPSTREAM_')) {
+    const upstreamStatus = Number(data.upstreamStatus || code.slice('AI_UPSTREAM_'.length));
+    const reason = englishUpstreamReasons[upstreamStatus] || 'request failed';
+    return `AI provider returned ${upstreamStatus}: ${reason}`;
+  }
+  if (englishAiErrors[code]) return englishAiErrors[code];
+  const error = typeof data.error === 'string' ? data.error : '';
+  if (englishApiErrors[error]) return englishApiErrors[error];
+  const stockMatch = error.match(/^(.+) 库存不足，请返回购物车调整$/u);
+  if (stockMatch) return `${translateCatalogText(stockMatch[1], locale)} is out of stock. Please adjust your cart`;
+  return `Request failed (${status})`;
+}

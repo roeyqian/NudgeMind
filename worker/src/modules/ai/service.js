@@ -7,14 +7,13 @@ import { completeChat } from './provider.js';
 const AI_TYPES = new Set(['seller', 'guardian']);
 const DEFAULT_SUMMARY_THRESHOLD_CHARS = 10_000;
 const DEFAULT_RECENT_CONTEXT_CHARS = 4_000;
-const MAX_SUMMARY_CHARS = 3_000;
 
 export async function getAdvisorRecommendations({ request, env }) {
   await requireUser(request, env);
   const body = await readJson(request);
   const requirement = String(body.requirement || '').trim();
   const locale = body.locale === 'en' ? 'en' : 'zh';
-  if (!requirement || requirement.length > 800) throw { status: 400, message: '需求长度应为 1–800 字' };
+  if (!requirement) throw { status: 400, message: '请填写需求' };
 
   const { results } = await env.nudge_mind_db.prepare(`
     SELECT p.*, c.name AS category_name,
@@ -52,13 +51,13 @@ export async function getAdvisorRecommendations({ request, env }) {
       const product = byId.get(String(item?.product_id || ''));
       if (!product || seen.has(product.id)) return [];
       seen.add(product.id);
-      return [{ product, reason: String(item?.reason || '').trim().slice(0, 300) }];
+      return [{ product, reason: String(item?.reason || '').trim() }];
     }).slice(0, 3)
     : [];
   if (!recommendations.length) throw { status: 502, message: 'AI 未返回可用的商品匹配结果' };
 
   return json({
-    intro: String(parsed?.intro || '').trim().slice(0, 600),
+    intro: String(parsed?.intro || '').trim(),
     recommendations,
   });
 }
@@ -161,14 +160,14 @@ export async function getCheckoutGuardianIntervention({ request, env }) {
   );
 
   return json({
-    message: String(parsed?.message || rawResponse || '').trim().slice(0, 1_200),
+    message: String(parsed?.message || rawResponse || '').trim(),
     items: items.map((item) => {
       const recommendation = recommendations.get(item.productId);
       return {
         cartItemId: item.cartItemId,
         productId: item.productId,
         shouldRemove: Boolean(recommendation?.should_remove),
-        reason: String(recommendation?.reason || '').trim().slice(0, 500),
+        reason: String(recommendation?.reason || '').trim(),
         hasSellerChat: item.hasSellerChat,
         sellerPatterns: item.sellerPatterns,
         productPatterns: item.productPatterns,
@@ -184,7 +183,7 @@ export async function chat({ request, env }) {
   const aiType = String(body.aiType || '');
   const productId = String(body.productId || '');
   const locale = body.locale === 'en' ? 'en' : 'zh';
-  if (!message || message.length > 800) throw { status: 400, message: '问题长度应为 1–800 字' };
+  if (!message) throw { status: 400, message: '请输入问题' };
   if (!AI_TYPES.has(aiType)) throw { status: 400, message: 'AI 角色无效' };
 
   const row = await env.nudge_mind_db.prepare(`
@@ -257,7 +256,7 @@ async function loadConversationContext(env, userId, productId, aiType, product, 
     ...summaryAsContextMessage(summary, locale),
     ...stripRowId(older),
   ], signal, { temperature: 0.2, maxTokens: 700 });
-  const normalizedSummary = nextSummary.slice(0, MAX_SUMMARY_CHARS).trim();
+  const normalizedSummary = nextSummary.trim();
   if (!normalizedSummary) throw { status: 502, message: 'AI 对话摘要未返回有效内容' };
 
   await env.nudge_mind_db.prepare(`
@@ -374,7 +373,7 @@ export async function getAllHistory({ request, env, url }) {
 
 function parseAiResponse(rawResponse, product) {
   const parsed = parseJsonObject(rawResponse);
-  const response = String(parsed?.response || rawResponse || '').trim().slice(0, 2_000);
+  const response = String(parsed?.response || rawResponse || '').trim();
   if (!response) throw { status: 502, code: 'AI_EMPTY_RESPONSE', message: 'AI 服务未返回有效内容' };
 
   const stock = Number(product.stock || 0);

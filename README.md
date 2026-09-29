@@ -48,7 +48,7 @@ npm run dev
 
 ## AI 请求失败排查
 
-聊天报错会显示 HTTP 状态、应用错误码和请求 ID；DeepSeek 返回错误时，还会显示其状态和错误详情。`AI_UPSTREAM_401` 表示上游 API Key 无效，`AI_UPSTREAM_402` 表示余额不足，`AI_UPSTREAM_422` 通常要检查模型名或请求参数，`AI_UPSTREAM_429` 表示限流，`AI_UPSTREAM_500` / `AI_UPSTREAM_503` 表示上游暂时故障或过载。`AI_OUTPUT_TRUNCATED` 表示模型回答超过输出长度，`INTERNAL_ERROR` 表示 Worker 内部或数据库错误，应使用请求 ID 在 Worker 日志中定位。连接失败及 429/5xx 上游错误会在单次聊天请求内最多重试两次；配置和额度错误不会重试。
+聊天报错会显示 HTTP 状态、应用错误码和请求 ID；DeepSeek 返回错误时，还会显示其状态和错误详情。`AI_UPSTREAM_401` 表示上游 API Key 无效，`AI_UPSTREAM_402` 表示余额不足，`AI_UPSTREAM_422` 通常要检查模型名或请求参数，`AI_UPSTREAM_429` 表示限流，`AI_UPSTREAM_500` / `AI_UPSTREAM_503` 表示上游暂时故障或过载。AI 问题和回复不再受字符数限制；模型达到输出 token 上限时，Worker 会继续处理已返回的非空内容，原有 `max_tokens` 设置保持不变。`INTERNAL_ERROR` 表示 Worker 内部或数据库错误，应使用请求 ID 在 Worker 日志中定位。连接失败及 429/5xx 上游错误会在单次聊天请求内最多重试两次；配置和额度错误不会重试。
 
 ## AI 上下文摘要
 

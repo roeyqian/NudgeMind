@@ -838,7 +838,7 @@ onUnmounted(() => {
       <form class="advisor-form" @submit.prevent="submitAdvisor">
         <label>
           <span>{{ t('advisorPrompt') }}</span>
-          <textarea v-model="advisorRequirement" rows="4" maxlength="800" :placeholder="t('advisorPlaceholder')" required></textarea>
+          <textarea v-model="advisorRequirement" rows="4" :placeholder="t('advisorPlaceholder')" required></textarea>
         </label>
         <p class="advisor-disclosure"><ShieldCheck :size="16" />{{ t('advisorDisclosure') }}</p>
         <button class="primary-button" :disabled="advisorBusy || !advisorRequirement.trim()"><LoaderCircle v-if="advisorBusy" :size="18" class="spin" /><Sparkles v-else :size="18" />{{ advisorBusy ? t('advisorMatching') : t('advisorSubmit') }}</button>
@@ -1062,7 +1062,7 @@ onUnmounted(() => {
         </div>
         <div v-if="aiBusy" class="message assistant pending"><span>{{ aiType === 'seller' ? t('sellerAi') : t('guardianAi') }}</span><p><i></i><i></i><i></i></p></div>
       </div>
-      <form class="ai-input" @submit.prevent="sendAiMessage"><textarea v-model="aiInput" rows="2" maxlength="800" :placeholder="aiType === 'seller' ? t('sellerPlaceholder') : t('guardianPlaceholder')" @keydown.enter.exact.prevent="sendAiMessage"></textarea><button :disabled="!aiInput.trim() || aiBusy">{{ t('send') }}</button></form>
+      <form class="ai-input" @submit.prevent="sendAiMessage"><textarea v-model="aiInput" rows="2" :placeholder="aiType === 'seller' ? t('sellerPlaceholder') : t('guardianPlaceholder')" @keydown.enter.exact.prevent="sendAiMessage"></textarea><button :disabled="!aiInput.trim() || aiBusy">{{ t('send') }}</button></form>
     </aside>
     </Transition>
 

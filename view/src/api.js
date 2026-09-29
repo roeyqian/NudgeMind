@@ -1,3 +1,5 @@
+import { LOCALE_STORAGE_KEY, localizeApiError } from './i18n.js';
+
 const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 export const AUTH_EXPIRED_EVENT = 'nudge-mind:auth-expired';
 
@@ -23,6 +25,7 @@ export const session = {
 };
 
 async function request(path, options = {}) {
+  const locale = localStorage.getItem(LOCALE_STORAGE_KEY) === 'en' ? 'en' : 'zh';
   let response;
   try {
     response = await fetch(`${API_BASE}${path}`, {
@@ -34,17 +37,26 @@ async function request(path, options = {}) {
       },
     });
   } catch {
-    throw new Error('网络连接失败（NETWORK_ERROR），请检查连接后重试');
+    throw new Error(locale === 'en'
+      ? 'Network connection failed (NETWORK_ERROR). Check your connection and try again'
+      : '网络连接失败（NETWORK_ERROR），请检查连接后重试');
   }
 
-  const data = await response.json().catch(() => ({}));
+  const payload = await response.json().catch(() => ({}));
+  const data = payload && typeof payload === 'object' ? payload : {};
   if (!response.ok) {
     if (response.status === 401) {
       session.clear();
       window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT));
     }
-    const details = [`HTTP ${response.status}`, data.code, data.upstreamCode ? `上游 ${data.upstreamCode}` : '', data.requestId ? `请求 ID ${data.requestId}` : ''].filter(Boolean).join(' · ');
-    throw new Error(`${data.error || `请求失败（${response.status}）`}（${details}）`);
+    const details = [
+      `HTTP ${response.status}`,
+      data.code,
+      data.upstreamCode ? `${locale === 'en' ? 'Provider' : '上游'} ${data.upstreamCode}` : '',
+      data.requestId ? `${locale === 'en' ? 'Request ID' : '请求 ID'} ${data.requestId}` : '',
+    ].filter(Boolean).join(' · ');
+    const message = localizeApiError(data, response.status, locale);
+    throw new Error(details ? (locale === 'en' ? `${message} (${details})` : `${message}（${details}）`) : message);
   }
   return data;
 }

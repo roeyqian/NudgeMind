@@ -14,7 +14,7 @@ export function buildPrompt(aiType, product, locale = 'zh') {
 
   const responseFormat = `\n所有面向用户的内容必须使用${language}。你必须只返回一个可解析的 JSON 对象，不要使用 Markdown 代码块或添加任何额外文字。格式如下：
 {
-  "response": "给用户看的${language}回复，200 字以内",
+  "response": "给用户看的${language}回复",
   "add_to_cart": true,
   "scarcity": false,
   "social_proof": false,
@@ -40,9 +40,9 @@ export function buildAdvisorPrompt(catalog) {
 
 你必须只返回一个可解析的 JSON 对象，不要使用 Markdown 代码块或添加任何额外文字，格式如下：
 {
-  "intro": "给用户的简短、透明的建议，120 字以内",
+  "intro": "给用户的简短、透明的建议",
   "recommendations": [
-    { "product_id": "目录中的商品 ID", "reason": "这件商品为何符合需求，80 字以内" }
+    { "product_id": "目录中的商品 ID", "reason": "这件商品为何符合需求" }
   ]
 }
 
@@ -55,9 +55,9 @@ export function buildCheckoutGuardianPrompt(items, locale) {
 
 Return only one parseable JSON object, with no Markdown or extra text:
 {
-  "message": "A concise overall checkout intervention, at most 180 words",
+  "message": "An overall checkout intervention",
   "items": [
-    { "product_id": "a supplied product ID", "should_remove": true, "reason": "a concrete, fact-based reason, at most 80 words" }
+    { "product_id": "a supplied product ID", "should_remove": true, "reason": "a concrete, fact-based reason" }
   ]
 }
 
