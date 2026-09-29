@@ -57,3 +57,64 @@ npm run dev
 ## 数据边界
 
 购买为研究用模拟购买，不接入真实支付。订单会保存为 `completed`，并扣减样本库存。项目不会连接或访问 Shop Assistant 的 Worker URL。
+
+---
+
+# Nudge Mind (English)
+
+Nudge Mind is a lightweight e-commerce prototype for research on purchase decisions, rebuilt from Shop Assistant. The first version includes only what is needed for the basic research flow:
+
+- User registration, login, and logout
+- Product, cart, order, and AI conversation data in D1
+- Product categories, search, details, and specifications
+- Add to cart, change quantities, and simulate purchases
+- “Ask Seller AI” and “Ask Butler AI” on product detail pages
+- Basic prompts for both roles, without automated interventions, a research dashboard, or complex evaluation workflows
+
+## Technology Stack
+
+- Vue 3 + Vite
+- Cloudflare Workers
+- Cloudflare D1
+- Cloudflare KV
+- DeepSeek-compatible Chat Completions API
+
+## Local Setup
+
+```powershell
+cd view
+npm install
+npm run build
+
+cd ..\worker
+npm install
+Copy-Item wrangler.example.jsonc wrangler.jsonc
+```
+
+Enter the IDs of a new D1 database and KV namespace in `worker/wrangler.jsonc`. Do not use Shop Assistant's production resources.
+
+Initialize the local database:
+
+```powershell
+npm run db:migrate:local
+npm run db:seed:local
+```
+
+For AI features, set `DEEPSEEK_API_KEY` as a Worker Secret. You can also configure `DEEPSEEK_BASE_URL`, `DEEPSEEK_MODEL`, and `AI_TEMPERATURE` as variables. The default model is currently `deepseek-flash`. If the deployed Worker's `DEEPSEEK_MODEL` uses an old model name, update that variable when deploying.
+
+```powershell
+npx wrangler secret put DEEPSEEK_API_KEY
+npm run dev
+```
+
+## AI Request Errors
+
+Chat errors display the HTTP status, application error code, and request ID. When DeepSeek returns an error, its status and error details are also displayed. `AI_UPSTREAM_401` means the upstream API key is invalid; `AI_UPSTREAM_402` means the account has insufficient balance; `AI_UPSTREAM_422` usually calls for checking the model name or request parameters; and `AI_UPSTREAM_429` means rate limiting. `AI_UPSTREAM_500` and `AI_UPSTREAM_503` indicate a temporary upstream failure or overload. AI questions and replies no longer have a character limit. If the model reaches its output token limit, the Worker continues processing any nonempty content already returned; the existing `max_tokens` setting remains unchanged. `INTERNAL_ERROR` indicates a Worker or database error; use the request ID to locate it in the Worker logs. Connection failures and upstream 429/5xx errors are retried up to twice within a single chat request. Configuration and balance errors are not retried.
+
+## AI Context Summaries
+
+When the chat context for the same user, product, and AI role exceeds `AI_CONTEXT_SUMMARY_THRESHOLD` (default: `10000` characters), the Worker asks the model to summarize earlier messages and stores the summary. Subsequent chat requests use that summary and the most recent `AI_CONTEXT_RECENT_CHARS` (default: `4000` characters) as context. Both values can be overridden in the `vars` section of `worker/wrangler.jsonc`.
+
+## Data Boundaries
+
+Purchases are simulated for research purposes; no real payment processing is involved. Orders are saved as `completed`, and sample inventory is reduced. This project does not connect to or access the Shop Assistant Worker URL.
