@@ -1,5 +1,6 @@
 // Canonical bilingual catalog. Copy is paraphrased from the linked official source,
 // not presented as a verbatim brand slogan. Prices are CNY research fixtures.
+import { productResearch } from './product-research.mjs';
 export const checkedAt = '2026-10-07';
 export const categories = [
   ['cat_digital', '数码电子', '📱', 1], ['cat_fashion', '服饰鞋包', '👟', 2],
@@ -18,7 +19,7 @@ function p(number, brand, model, name, subtitle, description, specs, tag, source
     ]),
     tags: [pair(tag)[index], brand, model],
   }));
-  return { id, brand, model, source_url: sourceUrl, source_checked_at: checkedAt, price, locales };
+  return { id, brand, model, source_url: sourceUrl, source_checked_at: checkedAt, price, locales, research: productResearch[id] };
 }
 
 export const products = [

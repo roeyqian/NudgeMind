@@ -1,5 +1,9 @@
 # Nudge Mind
 
+## 研究依据与购买审阅
+
+Guardian 购买审阅现按“原文证据 → 真实研究中的可能机制 → 不确定性 → 核验建议”分析。v3 为 90 件商品逐件配置无诱导、折扣、虚构名人推荐、热度、限量、搭配购买或全部叠加；只有少数商品使用二次选择弹窗，记录各位置实际曝光。商品研究数据直接维护在 `worker/store/product-research.mjs`，理论与刺激逻辑位于 `worker/src/modules/ai/research-patterns.mjs`。首次升级需应用 `0008_research_exposures.sql`；已经应用者无需再次迁移。
+
 Nudge Mind 是一个用于消费决策研究的轻量电商原型，由 Shop Assistant 重构而来。第一版只保留完成基础研究流程所需的能力：
 
 - 用户注册、登录与退出
@@ -61,15 +65,9 @@ npm run dev
 
 - `worker/store/catalog.mjs`：唯一商品内容来源，包含品牌、型号、中英文文案、规格、标签、官方链接及研究价格。
 - `worker/store/research-fixtures.json`：模拟库存、销量、评分及热门/新品标记，保留原研究数据设置。
-- `worker/store/seed.sql` 与 `worker/store/migrations/0007_real_product_catalog.sql`：从目录生成的初始化和升级 SQL，勿单独编辑。
+- `worker/store/seed.sql` 与 `worker/store/migrations/0007_real_product_catalog.sql`：已有的初始化与升级 SQL 快照。
 
-修改目录后生成并检查 SQL：
-
-```powershell
-cd worker
-npm run catalog:build
-npm run catalog:check
-```
+修改商品目录时，同步维护新库使用的 `seed.sql`；已有数据库的商品更新通过新增迁移实施，不改写已应用的历史迁移。研究诱导配置直接修改 `product-research.mjs`，不需要数据库迁移。
 
 新数据库先运行全部迁移，再运行 seed；已有数据库只需应用新增的 `0007` 迁移，无需清库。迁移更新商品内容与模拟价格，补齐全部英文翻译，保留已有库存、销量、评分、商品 ID、购物车关联、订单和对话。历史订单名称、价格与对话作为原研究记录保留；AI 提示词要求使用当前型号事实，避免沿用旧对话中的虚构参数。
 
@@ -83,7 +81,7 @@ npm run db:migrate:remote
 
 `0007` 在更新前将已有商品和英文翻译保存到 `catalog_0007_products_backup` 与 `catalog_0007_translations_backup`。需要回退时，配合升级前代码，执行 `worker/store/rollback/0007_real_product_catalog.sql`；它恢复被升级的旧商品内容与价格，保留当前库存及用户记录。备份表保留不删除；回退 SQL 不改变 D1 迁移登记，后续再次升级需显式执行升级 SQL。新库中原本没有的商品不会因回退被删除。
 
-价格为人民币研究模拟定价，库存、销量、评分和热门/新品标记均为模拟数据，不代表品牌或零售商实时数据。没有可靠原价依据的商品不展示折扣原价。商品图继续使用根据当前名称与标签生成的示意图；本次没有引入商品实拍照片。迁移应用及部署需要在目标环境执行，Worker URL 的访问验证由用户完成。
+价格为人民币研究模拟定价，库存、销量、评分和热门/新品标记均为模拟数据，不代表品牌或零售商实时数据。商品事实表不保存没有可靠依据的折扣原价；研究配置为部分商品提供模拟划线价，该值不写入商品事实表或用于结算。商品图继续使用根据当前名称与标签生成的示意图；本次没有引入商品实拍照片。迁移应用及部署需要在目标环境执行，Worker URL 的访问验证由用户完成。
 
 ## 数据边界
 

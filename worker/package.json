@@ -4,8 +4,6 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "catalog:build": "node scripts/build-catalog.mjs",
-    "catalog:check": "node scripts/build-catalog.mjs --check",
     "dev": "wrangler dev",
     "build:view": "npm --prefix ../view run build",
     "deploy": "npm run build:view && wrangler deploy",

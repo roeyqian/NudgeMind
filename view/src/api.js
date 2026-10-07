@@ -98,6 +98,7 @@ export const OrderAPI = {
 };
 
 export const AIAPI = {
+  researchExposure: (payload) => request('/ai/research-exposure', { method: 'POST', body: JSON.stringify(payload) }),
   chat: (payload) => request('/ai/chat', { method: 'POST', body: JSON.stringify(payload) }),
   advisor: (payload) => request('/ai/advisor', { method: 'POST', body: JSON.stringify(payload) }),
   checkoutGuardian: (locale) => request('/ai/checkout-guardian', { method: 'POST', body: JSON.stringify({ locale }) }),

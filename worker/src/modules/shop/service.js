@@ -1,4 +1,5 @@
 import { json } from '../../app/http.js';
+import { researchProfile } from '../ai/research-patterns.mjs';
 
 export async function getProducts({ env, url }) {
   const locale = requestedLocale(url);
@@ -125,6 +126,7 @@ export async function getProductImage({ env, params, url }) {
 export function normalizeProduct(product) {
   return {
     ...product,
+    research: researchProfile(product),
     image_url: productImageUrl(product.id),
     specs: parseJson(product.specs_json, {}),
     tags: parseJson(product.tags_json, []),

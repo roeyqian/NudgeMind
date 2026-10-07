@@ -3,10 +3,32 @@ import { normalizeProduct } from '../shop/service.js';
 import { buildAdvisorPrompt, buildCheckoutGuardianPrompt, buildPrompt } from './prompts.js';
 import { buildSummaryPrompt } from './summary-prompt.js';
 import { completeChat } from './provider.js';
+import { buildResearchStimuli, enrichPattern } from './research-patterns.mjs';
 
 const AI_TYPES = new Set(['seller', 'guardian']);
 const DEFAULT_SUMMARY_THRESHOLD_CHARS = 10_000;
 const DEFAULT_RECENT_CONTEXT_CHARS = 4_000;
+
+export async function recordResearchExposure({ request, env }) {
+  const { user } = await requireUser(request, env);
+  const body = await readJson(request);
+  const locale = body.locale === 'en' ? 'en' : 'zh';
+  const product = await env.nudge_mind_db.prepare('SELECT id, price FROM products WHERE id = ?')
+    .bind(String(body.productId || '')).first();
+  if (!product) throw { status: 404, message: '商品不存在' };
+  const stimulus = buildResearchStimuli(product, locale).find((item) => item.id === body.stimulusId);
+  if (!stimulus || stimulus.evidenceText !== body.evidenceText) {
+    throw { status: 400, message: '研究情境证据无效，请重新打开商品详情' };
+  }
+  await env.nudge_mind_db.prepare(`
+    INSERT INTO research_exposures
+      (id, user_id, product_id, stimulus_id, version, pattern_type, evidence_text, stage, locale)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(user_id, stimulus_id) DO NOTHING
+  `).bind(createId('exposure'), user.userId, product.id, stimulus.id, stimulus.version,
+    stimulus.type, stimulus.evidenceText, stimulus.stage, locale).run();
+  return json({ recorded: true });
+}
 
 export async function getAdvisorRecommendations({ request, env }) {
   await requireUser(request, env);
@@ -94,7 +116,7 @@ export async function getCheckoutGuardianIntervention({ request, env }) {
   `).bind(locale, user.userId).all();
   if (!results.length) throw { status: 400, message: '购物车为空' };
 
-  const [sellerMessages, storedPatterns] = await Promise.all([
+  const [sellerMessages, storedPatterns, exposures, userNeeds] = await Promise.all([
     env.nudge_mind_db.prepare(`
       SELECT ac.id, ac.product_id, ac.content
       FROM ai_conversations ac
@@ -109,6 +131,17 @@ export async function getCheckoutGuardianIntervention({ request, env }) {
       JOIN cart_items ci ON ci.product_id = pe.product_id AND ci.user_id = pe.user_id
       WHERE pe.user_id = ? AND ac.ai_type = 'seller' AND ac.role = 'assistant'
       ORDER BY pe.created_at DESC, pe.rowid DESC
+    `).bind(user.userId).all(),
+    env.nudge_mind_db.prepare(`
+      SELECT re.* FROM research_exposures re
+      JOIN cart_items ci ON ci.product_id = re.product_id AND ci.user_id = re.user_id
+      WHERE re.user_id = ? ORDER BY re.created_at, re.rowid
+    `).bind(user.userId).all(),
+    env.nudge_mind_db.prepare(`
+      SELECT ac.id, ac.product_id, ac.content FROM ai_conversations ac
+      JOIN cart_items ci ON ci.product_id = ac.product_id AND ci.user_id = ac.user_id
+      WHERE ac.user_id = ? AND ac.role = 'user'
+      ORDER BY ac.timestamp DESC, ac.rowid DESC
     `).bind(user.userId).all(),
   ]);
   const messagesByProduct = new Map();
@@ -145,19 +178,36 @@ export async function getCheckoutGuardianIntervention({ request, env }) {
       originalPrice: product.original_price,
       stock: product.stock,
       rating: product.rating,
+      dataBasis: 'Cart prices, inventory, ratings and engagement are research simulation data, not live retailer data. Stock controls availability in this simulation only.',
       subtitle: product.subtitle,
       description: product.description,
       specs: product.specs,
       tags: product.tags,
+      researchConfiguration: product.research,
       hasSellerChat: (messagesByProduct.get(product.id) || []).length > 0,
-      sellerPatterns: (patternsByProduct.get(product.id) || []).slice(0, 12),
-      productPatterns: getProductPatterns(product, locale),
+      sellerPatterns: (patternsByProduct.get(product.id) || []).slice(0, 12)
+        .map((pattern) => enrichPattern({ ...pattern, evidenceStatus: 'seller-message-cue-not-proof-of-deception' }, locale)),
+      productPatterns: exposures.results.filter((entry) => entry.product_id === product.id)
+        .map((entry) => enrichPattern({ type: entry.pattern_type, evidenceText: entry.evidence_text,
+          exposureId: entry.id, stimulusId: entry.stimulus_id, version: entry.version,
+          stage: entry.stage, observedAt: entry.created_at, evidenceLocale: entry.locale,
+          evidenceStatus: 'client-reported-visible-synthetic-stimulus', modality: 'text+visual' }, locale)),
+      possibleProductCues: getProductPatterns(product, locale),
+      userStatements: userNeeds.results.filter((entry) => entry.product_id === product.id)
+        .slice(0, 6).map((entry) => ({ messageId: entry.id, text: String(entry.content).slice(0, 1500) })),
     };
   });
   const rawResponse = await completeChat(env, buildCheckoutGuardianPrompt(items, locale), [
     { role: 'user', content: locale === 'en' ? 'Review this cart before checkout.' : '请在确认购买前审阅这个购物车。' },
-  ], request.signal, { temperature: 0.25, maxTokens: 1_400, jsonOutput: true });
+  ], request.signal, { temperature: 0.25, maxTokens: Math.min(6000, 500 + items.length * 350), jsonOutput: true });
   const parsed = parseJsonObject(rawResponse);
+  if (!parsed || typeof parsed.message !== 'string' || !parsed.message.trim() || !Array.isArray(parsed.items)
+    || parsed.items.length !== items.length
+    || new Set(parsed.items.map((item) => item?.product_id)).size !== items.length
+    || parsed.items.some((entry) => !items.some((item) => item.productId === entry?.product_id)
+      || typeof entry.should_remove !== 'boolean' || typeof entry.reason !== 'string' || !entry.reason.trim())) {
+    throw { status: 502, message: 'AI 未返回完整的购买分析，请重试' };
+  }
   const recommendations = new Map(
     Array.isArray(parsed?.items)
       ? parsed.items.map((item) => [String(item?.product_id || ''), item])
@@ -171,7 +221,7 @@ export async function getCheckoutGuardianIntervention({ request, env }) {
       return {
         cartItemId: item.cartItemId,
         productId: item.productId,
-        shouldRemove: Boolean(recommendation?.should_remove),
+        shouldRemove: recommendation.should_remove === true,
         reason: String(recommendation?.reason || '').trim(),
         hasSellerChat: item.hasSellerChat,
         sellerPatterns: item.sellerPatterns,
@@ -212,6 +262,11 @@ export async function chat({ request, env }) {
     { role: 'user', content: message },
   ], request.signal, { jsonOutput: true, maxTokens: 900 });
   const aiResult = parseAiResponse(rawResponse, product);
+  if (aiType === 'guardian') {
+    aiResult.ui.scarcity = false;
+    aiResult.ui.social_proof = false;
+    aiResult.ui.price_anchor = false;
+  }
   const assistantMessageId = createId('message');
   const patterns = aiType === 'seller' ? detectSellerPatterns(aiResult, product, locale) : [];
 

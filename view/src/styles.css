@@ -560,3 +560,33 @@ input:focus, textarea:focus { border-color: #ad3c4b; box-shadow: 0 0 0 3px rgba(
   .cart-item > img { width: 70px; height: 66px; }
   .cart-item .quantity-control, .cart-item > strong { grid-column: 2; grid-row: auto; justify-self: start; }
 }
+
+.shopping-price { flex-wrap: wrap; }
+.shopping-price strong { font-size: 30px; }
+.offer-price-tag { padding: 4px 8px; border-radius: 5px; background: #ffe9ed; color: #9d2033; font-size: 12px; font-weight: 700; }
+.shopping-activity { display: flex; align-items: center; gap: 8px; margin: 12px 0 18px; color: var(--muted); font-size: 13px; }
+.buyer-avatar { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #efe6db; color: #795636; font-size: 10px; }
+.shopping-offer-line { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; font-size: 13px; line-height: 1.7; color: var(--red); }
+.shopping-offer-line:empty { display: none; }
+.offer-allocation { border: 1px solid currentColor; border-radius: 5px; padding: 3px 8px; }
+.offer-deadline { padding: 3px 0; }
+.cart-offer-backdrop { z-index: 100; }
+.cart-offer-dialog { padding: 36px 28px 24px; }
+.cart-offer-content h2 { font-size: 25px; line-height: 1.4; margin: 12px 0 22px; }
+.cart-offer-product { display: flex; align-items: center; gap: 14px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; }
+.cart-offer-product img { width: 70px; height: 70px; object-fit: cover; border-radius: 8px; }
+.cart-offer-product div { display: grid; gap: 10px; min-width: 0; }
+.cart-offer-product span { color: var(--red); font-size: 22px; font-weight: 700; }
+.cart-offer-note { color: var(--muted); font-size: 12px; line-height: 1.7; margin: 16px 0 24px; }
+.cart-offer-choices { display: grid; justify-items: center; gap: 14px; }
+.offer-decline { border: 0; background: none; color: var(--muted); font-size: 12px; text-decoration: underline; padding: 8px; cursor: pointer; }
+.offer-decline:disabled { cursor: wait; }
+.product-endorsement { display: flex; align-items: flex-start; gap: 12px; margin: 20px 0; padding: 16px; border-left: 3px solid #bd7d23; background: var(--paper); border-radius: 0 10px 10px 0; }
+.endorser-avatar { display: grid; place-items: center; flex: 0 0 36px; height: 36px; border-radius: 50%; color: #795636; background: #efe6db; font-weight: 700; }
+.product-endorsement small { color: var(--muted); font-size: 12px; }
+.product-endorsement p { margin: 8px 0 0; line-height: 1.7; font-size: 14px; }
+.product-companion { margin: 24px 0; border-top: 1px solid var(--line); padding-top: 20px; }
+.product-companion p { color: var(--muted); font-size: 13px; line-height: 1.7; }
+.pattern-reference { display: block; margin-top: 8px; color: var(--ink); text-decoration: underline; overflow-wrap: anywhere; font-size: 12px; }
+.guardian-pattern small { display: block; margin-top: 8px; color: var(--muted); line-height: 1.6; }
+.guardian-actions > .back-button { flex: 1; }

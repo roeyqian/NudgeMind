@@ -37,6 +37,8 @@ import {
   session,
 } from './api.js';
 import { LOCALE_STORAGE_KEY, localizeCatalogItem, localizeImageUrl, messages, translateCatalogText } from './i18n.js';
+import ResearchPromotion from './components/ResearchPromotion.vue';
+import { researchProfile } from '../../worker/src/modules/ai/research-patterns.mjs';
 
 const user = ref(session.user);
 const THEME_STORAGE_KEY = 'nudge-mind-theme';
@@ -71,6 +73,58 @@ const checkoutStage = ref('details');
 const checkoutRemovalBusy = ref('');
 const checkoutClearBusy = ref(false);
 const checkoutForm = reactive({ name: '', phone: '', address: '' });
+const cartOfferProduct = ref(null);
+const cartOfferBusy = ref(false);
+
+function dismissCartOffer() {
+  if (!cartOfferBusy.value) cartOfferProduct.value = null;
+}
+
+function handleCartOfferKeydown(event) {
+  if (event.key === 'Escape') {
+    event.stopPropagation();
+    dismissCartOffer();
+  }
+  if (event.key !== 'Tab') return;
+  const buttons = [...event.currentTarget.querySelectorAll('button:not(:disabled)')];
+  if (!buttons.length) { event.preventDefault(); return; }
+  const first = buttons[0];
+  const last = buttons[buttons.length - 1];
+  if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+  else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+}
+
+async function acceptCartOffer() {
+  if (cartOfferBusy.value || !cartOfferProduct.value) return;
+  cartOfferBusy.value = true;
+  try {
+    if (await addToCart(cartOfferProduct.value.id, 1, true)) cartOfferProduct.value = null;
+  } finally {
+    cartOfferBusy.value = false;
+  }
+}
+const pendingExposures = new Map();
+
+function recordExposure({ productId, locale: exposureLocale, stimulus }) {
+  const key = `${user.value?.id || user.value?.username}:${stimulus.id}`;
+  if (pendingExposures.has(key)) return;
+  const payload = { productId, locale: exposureLocale, stimulusId: stimulus.id, evidenceText: stimulus.evidenceText };
+  const entry = { payload, promise: null };
+  pendingExposures.set(key, entry);
+  entry.promise = AIAPI.researchExposure(payload).then(() => {
+    if (pendingExposures.get(key) === entry) pendingExposures.delete(key);
+  }).catch(() => { entry.promise = null; });
+}
+
+async function flushExposures() {
+  for (const [key, entry] of [...pendingExposures]) {
+    if (entry.promise) await entry.promise;
+    if (pendingExposures.get(key) === entry) {
+      await AIAPI.researchExposure(entry.payload);
+      pendingExposures.delete(key);
+    }
+  }
+}
 const orders = ref([]);
 const ordersBusy = ref(false);
 const chatHistory = ref([]);
@@ -226,6 +280,8 @@ async function logout() {
 }
 
 function resetSession() {
+  cartOfferProduct.value = null;
+  pendingExposures.clear();
   session.clear();
   user.value = null;
   products.value = [];
@@ -345,19 +401,25 @@ function closeProductDrawer() {
   aiOpen.value = false;
 }
 
-async function addToCart(productId, quantity = 1) {
+async function addToCart(productId, quantity = 1, offerAccepted = false) {
+  if (!offerAccepted && productDrawerOpen.value && selectedProduct.value?.id === productId && selectedProduct.value.stock > 0 && researchProfile(selectedProduct.value).dialog) {
+    cartOfferProduct.value = { ...selectedProduct.value };
+    return false;
+  }
   try {
     await CartAPI.add(productId, quantity);
     cart.value = localizeItems((await CartAPI.get(locale.value)).items);
     notify(t('added'));
+    return true;
   } catch (error) {
     notify(error.message, 'error');
+    return false;
   }
 }
 
 function addSuggestedProductToCart() {
   if (!selectedProduct.value) return;
-  addToCart(selectedProduct.value.id);
+  addToCart(selectedProduct.value.id, 1, aiType.value === 'guardian');
 }
 
 async function showCart() {
@@ -409,6 +471,7 @@ async function requestCheckoutGuardian() {
   if (checkoutGuardianBusy.value) return;
   checkoutGuardianBusy.value = true;
   try {
+    await flushExposures();
     checkoutGuardian.value = await AIAPI.checkoutGuardian(locale.value);
     checkoutStage.value = 'guardian';
   } catch (error) {
@@ -966,14 +1029,17 @@ onUnmounted(() => {
                 <p>{{ item.hasSellerChat ? t('guardianSellerChatFound') : t('guardianNoSellerChat') }}</p>
                 <p v-if="!item.sellerPatterns.length && !item.productPatterns.length">{{ t('guardianNoPatterns') }}</p>
                 <div v-for="(pattern, index) in item.sellerPatterns" :key="`seller-${pattern.messageId}-${index}`" class="guardian-pattern">
-                  <span>{{ t('guardianSellerPrompt') }} · {{ t(`guardianPattern_${pattern.type}`) }}</span>
-                  <p>{{ t(`guardianPatternAdvice_${pattern.type}`) }}</p>
+                  <span>{{ t('guardianSellerPrompt') }} · {{ pattern.label || t(`guardianPattern_${pattern.type}`) }}</span>
+                  <p>{{ pattern.mechanism }} · {{ pattern.advice }}</p>
                   <details><summary>{{ t('guardianSeeQuote') }}</summary><q>{{ pattern.evidenceText }}</q></details>
+                  <a v-for="source in pattern.references" :key="source.id" class="pattern-reference" :href="source.url" target="_blank" rel="noopener noreferrer">{{ source.title }}</a>
                 </div>
                 <div v-for="(pattern, index) in item.productPatterns" :key="`product-${pattern.type}-${index}`" class="guardian-pattern">
-                  <span>{{ t('guardianProductPrompt') }} · {{ t(`guardianPattern_${pattern.type}`) }}</span>
-                  <p>{{ t(`guardianPatternAdvice_${pattern.type}`) }}</p>
+                  <span>{{ t('guardianProductPrompt') }} · {{ pattern.label || t(`guardianPattern_${pattern.type}`) }}</span>
+                  <p>{{ pattern.mechanism }} · {{ pattern.advice }}</p>
                   <details><summary>{{ t('guardianSeeBasis') }}</summary><q>{{ pattern.evidenceText }}</q></details>
+                  <small>{{ t('guardianExposureNote') }} · {{ pattern.observedAt }}</small>
+                  <a v-for="source in pattern.references" :key="source.id" class="pattern-reference" :href="source.url" target="_blank" rel="noopener noreferrer">{{ source.title }}</a>
                 </div>
               </div>
             </div>
@@ -982,7 +1048,7 @@ onUnmounted(() => {
           </article>
         </div>
         <div class="guardian-actions">
-          <button type="button" class="primary-button" :disabled="checkoutBusy || checkoutClearBusy || !!checkoutRemovalBusy || !cart.length" @click="clearCheckoutCart"><LoaderCircle v-if="checkoutClearBusy" :size="18" class="spin" />{{ t('guardianClearCart') }}</button>
+          <button type="button" class="back-button" @click="closeCheckout">{{ t('guardianReturnToCompare') }}</button>
           <button type="button" class="back-button" :disabled="checkoutBusy || checkoutClearBusy || !!checkoutRemovalBusy || !cart.length" @click="submitOrder"><LoaderCircle v-if="checkoutBusy" :size="18" class="spin" />{{ t('guardianContinue') }}</button>
         </div>
       </section>
@@ -1016,10 +1082,12 @@ onUnmounted(() => {
               </section>
               <section class="detail-info">
                 <div class="rating"><Star :size="16" fill="currentColor" /> {{ selectedProduct.rating }} <span>· {{ selectedProduct.sales_count }} {{ t('followers') }}</span></div>
+                <ResearchPromotion :key="`activity:${selectedProduct.id}:${locale}`" placement="activity" :product="selectedProduct" :locale="locale" @exposed="recordExposure" />
                 <h1>{{ selectedProduct.name }}</h1>
                 <p class="detail-subtitle">{{ selectedProduct.subtitle }}</p>
-                <div class="detail-price"><strong>{{ t('currency') }}{{ money(selectedProduct.price) }}</strong><s v-if="selectedProduct.original_price">{{ t('currency') }}{{ money(selectedProduct.original_price) }}</s></div>
+                <ResearchPromotion :key="`price:${selectedProduct.id}:${locale}`" placement="price" :product="selectedProduct" :locale="locale" @exposed="recordExposure" />
                 <p class="detail-description">{{ selectedProduct.description }}</p>
+                <ResearchPromotion :key="`endorsement:${selectedProduct.id}:${locale}`" placement="endorsement" :product="selectedProduct" :locale="locale" @exposed="recordExposure" />
                 <div v-if="selectedProduct.source_url" class="product-source">
                   <a :href="selectedProduct.source_url" target="_blank" rel="noopener noreferrer">{{ t('officialProductSource') }}</a>
                   <span>{{ t('sourceCheckedAt') }} · {{ selectedProduct.source_checked_at }}</span>
@@ -1034,7 +1102,9 @@ onUnmounted(() => {
                     <dt>{{ t('stock') }}</dt><dd>{{ selectedProduct.stock }} {{ t('pieces') }}</dd>
                   </dl>
                 </section>
+                <ResearchPromotion :key="`offer:${selectedProduct.id}:${locale}`" placement="offer" :product="selectedProduct" :locale="locale" @exposed="recordExposure" />
                 <div class="detail-actions"><button class="primary-button" :disabled="selectedProduct.stock < 1" @click="addToCart(selectedProduct.id)"><ShoppingCart :size="19" />{{ t('addToCart') }}</button></div>
+                <ResearchPromotion :key="`companion:${selectedProduct.id}:${locale}`" placement="companion" :product="selectedProduct" :locale="locale" @exposed="recordExposure" @companion="aiOpen = false; openProduct({ id: $event })" />
                 <section class="ai-choice mobile-ai-choice">
                   <div><p class="eyebrow dark">{{ t('basicAi') }}</p><h2>{{ t('askWho') }}</h2></div>
                   <div class="ai-buttons">
@@ -1072,6 +1142,15 @@ onUnmounted(() => {
       <form class="ai-input" @submit.prevent="sendAiMessage"><textarea v-model="aiInput" rows="2" :placeholder="aiType === 'seller' ? t('sellerPlaceholder') : t('guardianPlaceholder')" @keydown.enter.exact.prevent="sendAiMessage"></textarea><button :disabled="!aiInput.trim() || aiBusy">{{ t('send') }}</button></form>
     </aside>
     </Transition>
+
+    <Teleport to="body">
+      <div v-if="cartOfferProduct" class="modal-backdrop cart-offer-backdrop" @click.self="dismissCartOffer" @keydown="handleCartOfferKeydown">
+        <section class="modal-card cart-offer-dialog" role="dialog" aria-modal="true" :aria-label="locale === 'en' ? 'Product offer' : '商品优惠选择'">
+          <button type="button" class="modal-close" :disabled="cartOfferBusy" :aria-label="t('close')" @click="dismissCartOffer"><X /></button>
+          <ResearchPromotion :key="`confirmation:${cartOfferProduct.id}:${locale}`" placement="confirmation" :product="cartOfferProduct" :locale="locale" :busy="cartOfferBusy" @exposed="recordExposure" @buy="acceptCartOffer" @decline="dismissCartOffer" />
+        </section>
+      </div>
+    </Teleport>
 
     <Transition name="toast">
       <div v-if="toast.show" class="toast" :class="toast.kind"><CheckCircle2 v-if="toast.kind === 'success'" :size="19" /><X v-else :size="19" />{{ toast.message }}</div>
