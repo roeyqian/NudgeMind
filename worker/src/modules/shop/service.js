@@ -28,6 +28,7 @@ export async function getProducts({ env, url }) {
   `).bind(locale, ...bindings).first();
   const { results } = await env.nudge_mind_db.prepare(`
     SELECT p.*, c.name AS category_name,
+      ps.brand, ps.model, ps.source_url, ps.source_checked_at, ps.content_basis, ps.price_basis,
       COALESCE(pt.name, p.name) AS name,
       COALESCE(pt.subtitle, p.subtitle) AS subtitle,
       COALESCE(pt.description, p.description) AS description,
@@ -35,6 +36,7 @@ export async function getProducts({ env, url }) {
       COALESCE(pt.tags_json, p.tags_json) AS tags_json
     FROM products p
     JOIN categories c ON c.id = p.category_id
+    LEFT JOIN product_sources ps ON ps.product_id = p.id
     LEFT JOIN product_translations pt ON pt.product_id = p.id AND pt.locale = ?
     WHERE ${where}
     ORDER BY ${orderBy}
@@ -60,6 +62,7 @@ export async function getProduct({ env, params, url }) {
   const locale = requestedLocale(url);
   const product = await env.nudge_mind_db.prepare(`
     SELECT p.*, c.name AS category_name,
+      ps.brand, ps.model, ps.source_url, ps.source_checked_at, ps.content_basis, ps.price_basis,
       COALESCE(pt.name, p.name) AS name,
       COALESCE(pt.subtitle, p.subtitle) AS subtitle,
       COALESCE(pt.description, p.description) AS description,
@@ -67,6 +70,7 @@ export async function getProduct({ env, params, url }) {
       COALESCE(pt.tags_json, p.tags_json) AS tags_json
     FROM products p
     JOIN categories c ON c.id = p.category_id
+    LEFT JOIN product_sources ps ON ps.product_id = p.id
     LEFT JOIN product_translations pt ON pt.product_id = p.id AND pt.locale = ?
     WHERE p.id = ?
   `).bind(locale, params.id).first();
@@ -84,9 +88,15 @@ export async function getCategories({ env }) {
 }
 
 export async function getProductImage({ env, params, url }) {
-  const product = await env.nudge_mind_db.prepare('SELECT name, category_id, tags_json FROM products WHERE id = ?').bind(params.id).first();
-  if (!product) throw { status: 404, message: '商品不存在' };
   const locale = url.searchParams.get('locale') === 'en' ? 'en' : 'zh';
+  const product = await env.nudge_mind_db.prepare(`
+    SELECT COALESCE(pt.name, p.name) AS name, p.category_id,
+      COALESCE(pt.tags_json, p.tags_json) AS tags_json
+    FROM products p
+    LEFT JOIN product_translations pt ON pt.product_id = p.id AND pt.locale = ?
+    WHERE p.id = ?
+  `).bind(locale, params.id).first();
+  if (!product) throw { status: 404, message: '商品不存在' };
   const palette = {
     cat_digital: ['#b7c9c1', '#24483a'],
     cat_fashion: ['#d9c9bc', '#663f31'],
@@ -94,11 +104,12 @@ export async function getProductImage({ env, params, url }) {
     cat_beauty: ['#e7c9c5', '#7a4047'],
     cat_food: ['#e7d2a5', '#674c25'],
   }[product.category_id] || ['#d5d8d0', '#34443d'];
-  const translation = locale === 'en' ? productImageTranslations[params.id] : null;
-  const name = escapeXml(translation?.name || product.name);
-  const iconLabel = translation?.label || getProductIconLabel(product);
+  const name = escapeXml(product.name);
+  const iconLabel = getProductIconLabel(product);
   const label = escapeXml(iconLabel);
-  const labelSize = Array.from(iconLabel).length <= 1 ? 210 : Array.from(iconLabel).length <= 2 ? 170 : Array.from(iconLabel).length <= 3 ? 128 : Array.from(iconLabel).length <= 4 ? 98 : 76;
+  const labelSize = Math.min(210, Math.floor(340 / Math.max(1, Array.from(iconLabel).length)));
+  const nameWidthUnits = Array.from(product.name).reduce((width, character) => width + (/^[\u0000-\u00ff]$/u.test(character) ? 0.7 : 1), 0);
+  const nameFontSize = Math.min(28, Math.floor(700 / Math.max(1, nameWidthUnits)));
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 680" role="img" aria-label="${name}">
     <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${palette[0]}"/><stop offset="1" stop-color="#f5f1e7"/></linearGradient></defs>
     <rect width="800" height="680" fill="url(#g)"/>
@@ -106,7 +117,7 @@ export async function getProductImage({ env, params, url }) {
     <circle cx="640" cy="110" r="135" fill="none" stroke="${palette[1]}" stroke-opacity=".1" stroke-width="2"/>
     <rect x="205" y="115" width="390" height="390" rx="96" fill="${palette[1]}" opacity=".94"/>
     <text x="400" y="350" text-anchor="middle" font-family="Arial,sans-serif" font-size="${labelSize}" font-weight="700" fill="#f8f2e6">${label}</text>
-    <text x="400" y="585" text-anchor="middle" font-family="Arial,sans-serif" font-size="28" font-weight="700" fill="${palette[1]}">${name}</text>
+    <text x="400" y="585" text-anchor="middle" font-family="Arial,sans-serif" font-size="${nameFontSize}" font-weight="700" fill="${palette[1]}">${name}</text>
   </svg>`;
   return new Response(svg, { headers: { 'content-type': 'image/svg+xml; charset=utf-8', 'cache-control': 'no-store', 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'" } });
 }
@@ -141,101 +152,8 @@ function getProductIconLabel(product) {
   return Array.from(withoutSpecification || name || '商品').slice(-4).join('');
 }
 
-const productImageTranslations = {
-  prod_001: { name: 'Lightweight Creator Laptop 14', label: 'LAPTOP' },
-  prod_002: { name: 'Noise-Cancelling Over-Ear Headphones', label: 'AUDIO' },
-  prod_003: { name: 'Fitness Smartwatch', label: 'WATCH' },
-  prod_004: { name: 'City Cushion Running Shoes', label: 'RUN' },
-  prod_005: { name: 'Lightweight Commuter Tote', label: 'TOTE' },
-  prod_006: { name: 'Relaxed Straight-Leg Jeans', label: 'DENIM' },
-  prod_007: { name: 'Smart Robot Vacuum & Mop', label: 'CLEAN' },
-  prod_008: { name: 'Desktop Air Purifier', label: 'AIR' },
-  prod_009: { name: 'Pour-Over Temperature-Control Kettle', label: 'BREW' },
-  prod_010: { name: 'Daily Lightweight Sunscreen', label: 'SPF' },
-  prod_011: { name: 'Constant-Temperature Ionic Hair Dryer', label: 'DRY' },
-  prod_012: { name: 'Soothing Hydrating Mask Set', label: 'MASK' },
-  prod_013: { name: 'Medium-Roast Drip Coffee', label: 'COFFEE' },
-  prod_014: { name: 'Daily Mixed Nuts, 30 Packs', label: 'NUTS' },
-  prod_015: { name: '72% Dark Chocolate Set', label: 'DARK' },
-  prod_016: { name: 'Portable Reading Tablet 11', label: 'TABLET' },
-  prod_017: { name: 'Portable Bluetooth Speaker', label: 'SOUND' },
-  prod_018: { name: '87-Key Mechanical Keyboard', label: 'KEYS' },
-  prod_019: { name: 'Dual-Port GaN Charger', label: 'CHARGE' },
-  prod_020: { name: 'Ergonomic Wireless Mouse', label: 'MOUSE' },
-  prod_021: { name: '4K Web Camera', label: 'CAM' },
-  prod_022: { name: 'Travel Portable SSD', label: 'SSD' },
-  prod_023: { name: 'Smart Home Display Hub', label: 'HUB' },
-  prod_024: { name: 'Mini Projector', label: 'VIEW' },
-  prod_025: { name: 'Lightweight Sun Jacket', label: 'SUN' },
-  prod_026: { name: 'Wool-Blend Knit Cardigan', label: 'KNIT' },
-  prod_027: { name: 'Lightweight Sports Sling Bag', label: 'SLING' },
-  prod_028: { name: 'Minimal Leather Loafers', label: 'LOAFER' },
-  prod_029: { name: 'Cotton Essential T-Shirt Set', label: 'TEE' },
-  prod_030: { name: 'Water-Repellent City Backpack', label: 'PACK' },
-  prod_031: { name: 'Quick-Dry Sport Shorts', label: 'SHORTS' },
-  prod_032: { name: 'Foldable Bucket Hat', label: 'HAT' },
-  prod_033: { name: 'Wool-Blend Scarf', label: 'SCARF' },
-  prod_034: { name: 'Multi-Tier Storage Cart', label: 'STORE' },
-  prod_035: { name: 'Ergonomic Office Chair', label: 'CHAIR' },
-  prod_036: { name: 'Natural Latex Pillow', label: 'SLEEP' },
-  prod_037: { name: 'Smart Sensor Desk Lamp', label: 'LAMP' },
-  prod_038: { name: 'Aroma Humidifier', label: 'MIST' },
-  prod_039: { name: 'Foldable Drying Rack', label: 'DRY' },
-  prod_040: { name: 'Enameled Cast-Iron Dutch Oven', label: 'COOK' },
-  prod_041: { name: 'Automatic Curtain Motor', label: 'CURTAIN' },
-  prod_042: { name: 'Cotton-Linen Bedding Set', label: 'BED' },
-  prod_043: { name: 'Amino Acid Cleansing Mousse', label: 'CLEAN' },
-  prod_044: { name: 'Repairing Hydration Serum', label: 'SERUM' },
-  prod_045: { name: 'Velvet Matte Lipstick', label: 'LIP' },
-  prod_046: { name: 'Electric Facial Cleansing Device', label: 'GLOW' },
-  prod_047: { name: 'Heated Eye Massager', label: 'EYE' },
-  prod_048: { name: 'Botanical Scented Shower Oil', label: 'BATH' },
-  prod_049: { name: 'Volumizing Dry Shampoo Spray', label: 'VOLUME' },
-  prod_050: { name: 'Portable Nine-Shade Eye Palette', label: 'EYES' },
-  prod_051: { name: 'Soothing Body Lotion', label: 'BODY' },
-  prod_052: { name: 'Low-Sugar Oat Granola', label: 'OATS' },
-  prod_053: { name: 'Freeze-Dried Strawberry Yogurt Bites', label: 'BERRY' },
-  prod_054: { name: 'Cold-Brew Tea Bag Set', label: 'TEA' },
-  prod_055: { name: 'Extra Virgin Olive Oil', label: 'OIL' },
-  prod_056: { name: 'Light-Roast Loose-Leaf Tea Gift Set', label: 'TEA' },
-  prod_057: { name: 'High-Protein Beef Jerky', label: 'BEEF' },
-  prod_058: { name: 'Handmade Butter Cookie Gift Tin', label: 'COOKIE' },
-  prod_059: { name: 'Zero-Sugar Sparkling Water, 12 Cans', label: 'FIZZ' },
-  prod_060: { name: 'Mixed-Grain Porridge Rice Set', label: 'GRAIN' },
-  prod_061: { name: 'E-Ink Reader', label: 'READ' },
-  prod_062: { name: 'Pocket Action Camera', label: 'CAM' },
-  prod_063: { name: 'Magnetic Wireless Power Bank', label: 'POWER' },
-  prod_064: { name: '27-Inch Office Monitor', label: 'SCREEN' },
-  prod_065: { name: 'Open-Ear Bluetooth Earbuds', label: 'AUDIO' },
-  prod_066: { name: 'Starter Drawing Tablet', label: 'DRAW' },
-  prod_067: { name: 'Lightweight Waterproof Raincoat', label: 'RAIN' },
-  prod_068: { name: 'Reversible Leather Belt', label: 'BELT' },
-  prod_069: { name: 'Polarised Sunglasses', label: 'SUN' },
-  prod_070: { name: 'Soft-Sole House Slippers', label: 'HOME' },
-  prod_071: { name: 'Linen-Blend Short-Sleeve Shirt', label: 'LINEN' },
-  prod_072: { name: 'Lightweight 20-Inch Cabin Suitcase', label: 'TRAVEL' },
-  prod_073: { name: 'Mini Rice Cooker', label: 'RICE' },
-  prod_074: { name: 'Clear Storage Boxes, Set of Three', label: 'STORE' },
-  prod_075: { name: 'Cotton Bath Towels, Set of Two', label: 'TOWEL' },
-  prod_076: { name: 'Manual Coffee Grinder', label: 'GRIND' },
-  prod_077: { name: 'Non-Slip Yoga Mat', label: 'YOGA' },
-  prod_078: { name: 'Reading Floor Lamp', label: 'LAMP' },
-  prod_079: { name: 'Light Hydrating Toner', label: 'TONER' },
-  prod_080: { name: 'Lightweight Moisturising Cream', label: 'CREAM' },
-  prod_081: { name: 'Shea Hand Cream, Set of Three', label: 'HANDS' },
-  prod_082: { name: 'Woody Eau de Toilette', label: 'SCENT' },
-  prod_083: { name: 'Essential Makeup Brush Set', label: 'BRUSH' },
-  prod_084: { name: 'Clear Moisturising Lip Balm', label: 'LIPS' },
-  prod_085: { name: 'Wildflower Honey', label: 'HONEY' },
-  prod_086: { name: 'Durum Wheat Pasta, Four Packs', label: 'PASTA' },
-  prod_087: { name: 'No-Added-Sugar Dried Mango', label: 'MANGO' },
-  prod_088: { name: 'Original Oat Drink, 12 Cartons', label: 'OAT' },
-  prod_089: { name: 'Garlic Chilli Sauce', label: 'SPICE' },
-  prod_090: { name: 'Tomato Vegetable Noodle Soup, Six Cups', label: 'SOUP' },
-};
-
 function productImageUrl(productId) {
-  return `/api/products/${encodeURIComponent(productId)}/image?v=icon-label-v3`;
+  return `/api/products/${encodeURIComponent(productId)}/image?v=real-catalog-v1`;
 }
 
 function escapeXml(value) {

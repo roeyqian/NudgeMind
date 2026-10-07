@@ -792,6 +792,7 @@ onUnmounted(() => {
           </div>
         </div>
 
+        <p class="catalog-disclosure">{{ t('catalogDisclosure') }}</p>
         <div class="category-row">
           <button :class="{ active: selectedCategory === 'all' }" @click="selectedCategory = 'all'">{{ t('all') }}</button>
           <button v-for="category in categories" :key="category.id" :class="{ active: selectedCategory === category.id }" @click="selectedCategory = category.id">
@@ -1019,6 +1020,12 @@ onUnmounted(() => {
                 <p class="detail-subtitle">{{ selectedProduct.subtitle }}</p>
                 <div class="detail-price"><strong>{{ t('currency') }}{{ money(selectedProduct.price) }}</strong><s v-if="selectedProduct.original_price">{{ t('currency') }}{{ money(selectedProduct.original_price) }}</s></div>
                 <p class="detail-description">{{ selectedProduct.description }}</p>
+                <div v-if="selectedProduct.source_url" class="product-source">
+                  <a :href="selectedProduct.source_url" target="_blank" rel="noopener noreferrer">{{ t('officialProductSource') }}</a>
+                  <span>{{ t('sourceCheckedAt') }} · {{ selectedProduct.source_checked_at }}</span>
+                  <p>{{ t('productSourceNote') }}</p>
+                  <p>{{ t('catalogDisclosure') }}</p>
+                </div>
                 <div class="tag-list"><span v-for="tag in selectedProduct.tags" :key="tag">{{ tag }}</span></div>
                 <section class="spec-panel">
                   <h2>{{ t('productSpecs') }}</h2>

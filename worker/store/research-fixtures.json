@@ -1,0 +1,722 @@
+{
+  "prod_001": {
+    "category_id": "cat_digital",
+    "stock": 42,
+    "sales_count": 718,
+    "rating": 4.7,
+    "is_hot": 1,
+    "is_new": 1
+  },
+  "prod_002": {
+    "category_id": "cat_digital",
+    "stock": 75,
+    "sales_count": 1432,
+    "rating": 4.8,
+    "is_hot": 1,
+    "is_new": 0
+  },
+  "prod_003": {
+    "category_id": "cat_digital",
+    "stock": 108,
+    "sales_count": 982,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_004": {
+    "category_id": "cat_fashion",
+    "stock": 130,
+    "sales_count": 2268,
+    "rating": 4.7,
+    "is_hot": 1,
+    "is_new": 0
+  },
+  "prod_005": {
+    "category_id": "cat_fashion",
+    "stock": 86,
+    "sales_count": 1045,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_006": {
+    "category_id": "cat_fashion",
+    "stock": 160,
+    "sales_count": 1875,
+    "rating": 4.5,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_007": {
+    "category_id": "cat_home",
+    "stock": 34,
+    "sales_count": 648,
+    "rating": 4.7,
+    "is_hot": 1,
+    "is_new": 1
+  },
+  "prod_008": {
+    "category_id": "cat_home",
+    "stock": 66,
+    "sales_count": 826,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_009": {
+    "category_id": "cat_home",
+    "stock": 92,
+    "sales_count": 1193,
+    "rating": 4.8,
+    "is_hot": 1,
+    "is_new": 0
+  },
+  "prod_010": {
+    "category_id": "cat_beauty",
+    "stock": 180,
+    "sales_count": 2536,
+    "rating": 4.7,
+    "is_hot": 1,
+    "is_new": 0
+  },
+  "prod_011": {
+    "category_id": "cat_beauty",
+    "stock": 58,
+    "sales_count": 765,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_012": {
+    "category_id": "cat_beauty",
+    "stock": 240,
+    "sales_count": 2897,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_013": {
+    "category_id": "cat_food",
+    "stock": 300,
+    "sales_count": 1842,
+    "rating": 4.6,
+    "is_hot": 1,
+    "is_new": 0
+  },
+  "prod_014": {
+    "category_id": "cat_food",
+    "stock": 215,
+    "sales_count": 3278,
+    "rating": 4.8,
+    "is_hot": 1,
+    "is_new": 0
+  },
+  "prod_015": {
+    "category_id": "cat_food",
+    "stock": 190,
+    "sales_count": 1568,
+    "rating": 4.7,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_016": {
+    "category_id": "cat_digital",
+    "stock": 64,
+    "sales_count": 936,
+    "rating": 4.7,
+    "is_hot": 1,
+    "is_new": 1
+  },
+  "prod_017": {
+    "category_id": "cat_digital",
+    "stock": 118,
+    "sales_count": 1240,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_018": {
+    "category_id": "cat_digital",
+    "stock": 73,
+    "sales_count": 861,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_019": {
+    "category_id": "cat_digital",
+    "stock": 156,
+    "sales_count": 1735,
+    "rating": 4.8,
+    "is_hot": 1,
+    "is_new": 0
+  },
+  "prod_020": {
+    "category_id": "cat_digital",
+    "stock": 95,
+    "sales_count": 1107,
+    "rating": 4.7,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_021": {
+    "category_id": "cat_digital",
+    "stock": 47,
+    "sales_count": 682,
+    "rating": 4.5,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_022": {
+    "category_id": "cat_digital",
+    "stock": 81,
+    "sales_count": 945,
+    "rating": 4.7,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_023": {
+    "category_id": "cat_digital",
+    "stock": 38,
+    "sales_count": 514,
+    "rating": 4.5,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_024": {
+    "category_id": "cat_digital",
+    "stock": 29,
+    "sales_count": 732,
+    "rating": 4.6,
+    "is_hot": 1,
+    "is_new": 0
+  },
+  "prod_025": {
+    "category_id": "cat_fashion",
+    "stock": 142,
+    "sales_count": 1386,
+    "rating": 4.6,
+    "is_hot": 1,
+    "is_new": 1
+  },
+  "prod_026": {
+    "category_id": "cat_fashion",
+    "stock": 77,
+    "sales_count": 863,
+    "rating": 4.5,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_027": {
+    "category_id": "cat_fashion",
+    "stock": 126,
+    "sales_count": 1471,
+    "rating": 4.7,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_028": {
+    "category_id": "cat_fashion",
+    "stock": 61,
+    "sales_count": 754,
+    "rating": 4.5,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_029": {
+    "category_id": "cat_fashion",
+    "stock": 220,
+    "sales_count": 2136,
+    "rating": 4.7,
+    "is_hot": 1,
+    "is_new": 0
+  },
+  "prod_030": {
+    "category_id": "cat_fashion",
+    "stock": 83,
+    "sales_count": 1022,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_031": {
+    "category_id": "cat_fashion",
+    "stock": 175,
+    "sales_count": 1638,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_032": {
+    "category_id": "cat_fashion",
+    "stock": 198,
+    "sales_count": 967,
+    "rating": 4.5,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_033": {
+    "category_id": "cat_fashion",
+    "stock": 109,
+    "sales_count": 826,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_034": {
+    "category_id": "cat_home",
+    "stock": 143,
+    "sales_count": 1201,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_035": {
+    "category_id": "cat_home",
+    "stock": 32,
+    "sales_count": 690,
+    "rating": 4.6,
+    "is_hot": 1,
+    "is_new": 0
+  },
+  "prod_036": {
+    "category_id": "cat_home",
+    "stock": 115,
+    "sales_count": 1356,
+    "rating": 4.7,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_037": {
+    "category_id": "cat_home",
+    "stock": 88,
+    "sales_count": 943,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_038": {
+    "category_id": "cat_home",
+    "stock": 104,
+    "sales_count": 1185,
+    "rating": 4.5,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_039": {
+    "category_id": "cat_home",
+    "stock": 97,
+    "sales_count": 738,
+    "rating": 4.5,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_040": {
+    "category_id": "cat_home",
+    "stock": 52,
+    "sales_count": 670,
+    "rating": 4.7,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_041": {
+    "category_id": "cat_home",
+    "stock": 44,
+    "sales_count": 529,
+    "rating": 4.5,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_042": {
+    "category_id": "cat_home",
+    "stock": 74,
+    "sales_count": 881,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_043": {
+    "category_id": "cat_beauty",
+    "stock": 195,
+    "sales_count": 1860,
+    "rating": 4.7,
+    "is_hot": 1,
+    "is_new": 1
+  },
+  "prod_044": {
+    "category_id": "cat_beauty",
+    "stock": 122,
+    "sales_count": 1067,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_045": {
+    "category_id": "cat_beauty",
+    "stock": 167,
+    "sales_count": 1428,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_046": {
+    "category_id": "cat_beauty",
+    "stock": 69,
+    "sales_count": 694,
+    "rating": 4.5,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_047": {
+    "category_id": "cat_beauty",
+    "stock": 56,
+    "sales_count": 614,
+    "rating": 4.5,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_048": {
+    "category_id": "cat_beauty",
+    "stock": 137,
+    "sales_count": 923,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_049": {
+    "category_id": "cat_beauty",
+    "stock": 214,
+    "sales_count": 1540,
+    "rating": 4.6,
+    "is_hot": 1,
+    "is_new": 0
+  },
+  "prod_050": {
+    "category_id": "cat_beauty",
+    "stock": 148,
+    "sales_count": 1126,
+    "rating": 4.5,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_051": {
+    "category_id": "cat_beauty",
+    "stock": 183,
+    "sales_count": 1298,
+    "rating": 4.7,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_052": {
+    "category_id": "cat_food",
+    "stock": 278,
+    "sales_count": 2116,
+    "rating": 4.7,
+    "is_hot": 1,
+    "is_new": 1
+  },
+  "prod_053": {
+    "category_id": "cat_food",
+    "stock": 256,
+    "sales_count": 1749,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_054": {
+    "category_id": "cat_food",
+    "stock": 169,
+    "sales_count": 1189,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_055": {
+    "category_id": "cat_food",
+    "stock": 112,
+    "sales_count": 834,
+    "rating": 4.7,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_056": {
+    "category_id": "cat_food",
+    "stock": 83,
+    "sales_count": 758,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_057": {
+    "category_id": "cat_food",
+    "stock": 147,
+    "sales_count": 1322,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_058": {
+    "category_id": "cat_food",
+    "stock": 121,
+    "sales_count": 1026,
+    "rating": 4.7,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_059": {
+    "category_id": "cat_food",
+    "stock": 245,
+    "sales_count": 1654,
+    "rating": 4.5,
+    "is_hot": 1,
+    "is_new": 0
+  },
+  "prod_060": {
+    "category_id": "cat_food",
+    "stock": 187,
+    "sales_count": 1098,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_061": {
+    "category_id": "cat_digital",
+    "stock": 86,
+    "sales_count": 642,
+    "rating": 4.7,
+    "is_hot": 1,
+    "is_new": 1
+  },
+  "prod_062": {
+    "category_id": "cat_digital",
+    "stock": 54,
+    "sales_count": 488,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_063": {
+    "category_id": "cat_digital",
+    "stock": 153,
+    "sales_count": 1326,
+    "rating": 4.6,
+    "is_hot": 1,
+    "is_new": 0
+  },
+  "prod_064": {
+    "category_id": "cat_digital",
+    "stock": 49,
+    "sales_count": 573,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_065": {
+    "category_id": "cat_digital",
+    "stock": 112,
+    "sales_count": 907,
+    "rating": 4.5,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_066": {
+    "category_id": "cat_digital",
+    "stock": 76,
+    "sales_count": 694,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_067": {
+    "category_id": "cat_fashion",
+    "stock": 124,
+    "sales_count": 1048,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_068": {
+    "category_id": "cat_fashion",
+    "stock": 138,
+    "sales_count": 876,
+    "rating": 4.5,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_069": {
+    "category_id": "cat_fashion",
+    "stock": 91,
+    "sales_count": 1185,
+    "rating": 4.6,
+    "is_hot": 1,
+    "is_new": 0
+  },
+  "prod_070": {
+    "category_id": "cat_fashion",
+    "stock": 232,
+    "sales_count": 1693,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_071": {
+    "category_id": "cat_fashion",
+    "stock": 117,
+    "sales_count": 784,
+    "rating": 4.5,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_072": {
+    "category_id": "cat_fashion",
+    "stock": 68,
+    "sales_count": 625,
+    "rating": 4.7,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_073": {
+    "category_id": "cat_home",
+    "stock": 103,
+    "sales_count": 917,
+    "rating": 4.6,
+    "is_hot": 1,
+    "is_new": 0
+  },
+  "prod_074": {
+    "category_id": "cat_home",
+    "stock": 184,
+    "sales_count": 1422,
+    "rating": 4.7,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_075": {
+    "category_id": "cat_home",
+    "stock": 167,
+    "sales_count": 1289,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_076": {
+    "category_id": "cat_home",
+    "stock": 92,
+    "sales_count": 741,
+    "rating": 4.7,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_077": {
+    "category_id": "cat_home",
+    "stock": 136,
+    "sales_count": 1094,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_078": {
+    "category_id": "cat_home",
+    "stock": 57,
+    "sales_count": 603,
+    "rating": 4.5,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_079": {
+    "category_id": "cat_beauty",
+    "stock": 176,
+    "sales_count": 1435,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_080": {
+    "category_id": "cat_beauty",
+    "stock": 142,
+    "sales_count": 1018,
+    "rating": 4.6,
+    "is_hot": 1,
+    "is_new": 0
+  },
+  "prod_081": {
+    "category_id": "cat_beauty",
+    "stock": 208,
+    "sales_count": 1792,
+    "rating": 4.7,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_082": {
+    "category_id": "cat_beauty",
+    "stock": 83,
+    "sales_count": 629,
+    "rating": 4.5,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_083": {
+    "category_id": "cat_beauty",
+    "stock": 114,
+    "sales_count": 846,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_084": {
+    "category_id": "cat_beauty",
+    "stock": 263,
+    "sales_count": 2316,
+    "rating": 4.7,
+    "is_hot": 1,
+    "is_new": 0
+  },
+  "prod_085": {
+    "category_id": "cat_food",
+    "stock": 157,
+    "sales_count": 1187,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_086": {
+    "category_id": "cat_food",
+    "stock": 224,
+    "sales_count": 1632,
+    "rating": 4.7,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_087": {
+    "category_id": "cat_food",
+    "stock": 193,
+    "sales_count": 1407,
+    "rating": 4.6,
+    "is_hot": 0,
+    "is_new": 0
+  },
+  "prod_088": {
+    "category_id": "cat_food",
+    "stock": 186,
+    "sales_count": 1253,
+    "rating": 4.6,
+    "is_hot": 1,
+    "is_new": 0
+  },
+  "prod_089": {
+    "category_id": "cat_food",
+    "stock": 271,
+    "sales_count": 2034,
+    "rating": 4.7,
+    "is_hot": 0,
+    "is_new": 1
+  },
+  "prod_090": {
+    "category_id": "cat_food",
+    "stock": 239,
+    "sales_count": 1724,
+    "rating": 4.5,
+    "is_hot": 0,
+    "is_new": 0
+  }
+}

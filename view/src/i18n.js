@@ -14,6 +14,10 @@ export const messages = {
 };
 
 Object.assign(messages.zh, {
+  officialProductSource: '查看品牌官方资料',
+  sourceCheckedAt: '资料核对日期',
+  catalogDisclosure: '真实商品资料 · 价格、库存、销量、评分和热度为研究模拟数据；图片为商品标签示意。',
+  productSourceNote: '名称、规格和介绍根据官方资料整理，宣传文案为改写摘要。实际在售版本及包装请以品牌资料为准。',
   deleteChat: '删除对话',
   deleteChatConfirm: '确定删除“{product}”与{ai}的整段对话吗？删除后无法恢复。',
   chatDeleted: '对话已删除',
@@ -42,6 +46,10 @@ Object.assign(messages.zh, {
 });
 
 Object.assign(messages.en, {
+  officialProductSource: 'View official product information',
+  sourceCheckedAt: 'Source checked',
+  catalogDisclosure: 'Real product information · Prices, inventory, sales, ratings and popularity are research simulations; images are label illustrations.',
+  productSourceNote: 'Names, specifications and descriptions follow official sources; promotional copy is paraphrased. Check the brand source for the actual market version and packaging.',
   deleteChat: 'Delete conversation',
   deleteChatConfirm: 'Delete the entire conversation about “{product}” with {ai}? This cannot be undone.',
   chatDeleted: 'Conversation deleted',
@@ -70,25 +78,11 @@ Object.assign(messages.en, {
 });
 
 const englishText = {
-  '数码电子': 'Digital & Electronics', '服饰鞋包': 'Fashion & Bags', '家居生活': 'Home & Living', '美妆护肤': 'Beauty & Skincare', '食品饮料': 'Food & Drink',
-  '轻薄创作笔记本 14': 'Lightweight Creator Laptop 14', '高分辨率屏幕，适合移动办公': 'High-resolution display for work on the go', '14 英寸轻薄笔记本，提供高分辨率屏幕、长续航和多接口，适合文档处理、学习与轻量创作。': 'A lightweight 14-inch laptop with a high-resolution display, long battery life, and versatile ports for documents, learning, and light creative work.',
-  '降噪头戴耳机': 'Noise-Cancelling Over-Ear Headphones', '沉浸降噪，长时间佩戴': 'Immersive noise cancellation for long listening sessions', '包耳式设计配合主动降噪与通透模式，适合通勤、办公室和长途旅行。': 'Over-ear design with active noise cancellation and transparency mode for commuting, offices, and long trips.',
-  '运动智能手表': 'Fitness Smartwatch', '全天候记录与长续航': 'All-day tracking with long battery life', '支持日常活动、睡眠和多种运动模式记录，可查看趋势数据与手机通知。': 'Tracks daily activity, sleep, and multiple workouts, with trend data and phone notifications.',
-  '城市缓震跑鞋': 'City Cushion Running Shoes', '轻量鞋面与稳定缓震': 'Lightweight upper with stable cushioning', '面向日常慢跑和通勤步行的缓震跑鞋，鞋面透气，后跟提供稳定支撑。': 'Cushioned running shoes for easy runs and commute walks, with a breathable upper and stable heel support.',
-  '轻量通勤托特包': 'Lightweight Commuter Tote', '可折叠，大容量收纳': 'Foldable with spacious storage', '轻量织物材质与分区内袋兼顾通勤和短途出行，可容纳日常文件与随身物品。': 'Lightweight fabric and divided inner pockets suit commutes and short trips, holding daily documents and essentials.',
-  '宽松直筒牛仔裤': 'Relaxed Straight-Leg Jeans', '高腰剪裁，日常百搭': 'High-rise cut for everyday styling', '采用中等厚度棉质牛仔布，直筒版型留有活动空间，适合四季日常穿着。': 'Medium-weight cotton denim in a straight fit with room to move, suitable for everyday wear in every season.',
-  '智能扫拖机器人': 'Smart Robot Vacuum & Mop', '自动集尘与地图规划': 'Auto-emptying with map planning', '通过激光导航规划清扫路线，支持扫拖、分区清洁和回充，基站可自动集尘。': 'Laser navigation plans cleaning routes, with vacuuming, mopping, zone cleaning, recharging, and auto-emptying.',
-  '桌面空气净化器': 'Desktop Air Purifier', '小空间过滤与空气监测': 'Small-space filtration and air monitoring', '面向卧室和书房的小型空气净化器，可显示颗粒物变化并提供睡眠低噪模式。': 'A compact purifier for bedrooms and studies that shows particulate changes and offers a quiet sleep mode.',
-  '手冲温控电热壶': 'Pour-Over Temperature-Control Kettle', '细口控流，实时温度显示': 'Precision pour with live temperature display', '细口壶嘴方便控制水流，支持温度设定与保温，适合咖啡和茶饮冲泡。': 'A gooseneck spout enables precise pouring, with temperature settings and keep-warm mode for coffee and tea.',
-  '日常清爽防晒乳': 'Daily Lightweight Sunscreen', '轻薄成膜，适合通勤': 'Lightweight finish for commuting', '质地轻薄、易推开，面向日常通勤和户外短时活动使用。': 'Lightweight and easy to spread for daily commuting and short outdoor activities.',
-  '恒温负离子吹风机': 'Constant-Temperature Ionic Hair Dryer', '高速干发与多档温控': 'Fast drying with multi-level heat control', '提供多档风速与温度，负离子模式用于减少吹发后的静电和毛躁感。': 'Multiple speed and heat settings, with an ionic mode designed to reduce static and frizz.',
-  '舒缓补水面膜组合': 'Soothing Hydrating Mask Set', '柔软膜布，日常补水': 'Soft sheet material for daily hydration', '含 10 片独立包装面膜，适合在清洁后作为日常补水护理使用。': 'Contains 10 individually packaged masks for daily hydration after cleansing.',
-  '中度烘焙挂耳咖啡': 'Medium-Roast Drip Coffee', '十袋独立包装，便捷冲泡': 'Ten individually packed bags for easy brewing', '阿拉比卡拼配咖啡粉采用独立挂耳包装，适合办公室和旅行中冲泡。': 'Arabica blend coffee in individual drip bags for brewing at the office or while travelling.',
-  '每日混合坚果 30 袋': 'Daily Mixed Nuts, 30 Packs', '独立小包装，便于控制分量': 'Individual packs for portion control', '多种坚果与果干按日分装，适合作为办公室或出行时的加餐。': 'A daily assortment of nuts and dried fruit, suitable for office or travel snacks.',
-  '72% 黑巧克力组合': '72% Dark Chocolate Set', '可可风味浓郁，独立小片': 'Rich cocoa flavor in individual pieces', '三盒装黑巧克力，采用小片分装，适合搭配咖啡或作为日常零食。': 'Three boxes of dark chocolate in individual pieces, ideal with coffee or as an everyday snack.',
-  '笔记本': 'Laptop', '办公': 'Work', '轻薄': 'Lightweight', '耳机': 'Headphones', '降噪': 'Noise cancellation', '通勤': 'Commuting', '智能手表': 'Smartwatch', '运动': 'Fitness', '健康记录': 'Health tracking', '跑鞋': 'Running shoes', '缓震': 'Cushioning', '包袋': 'Bags', '收纳': 'Storage', '牛仔裤': 'Jeans', '日常': 'Everyday', '基础款': 'Essentials', '清洁': 'Cleaning', '智能家居': 'Smart home', '扫拖': 'Vacuum & mop', '空气净化': 'Air purification', '卧室': 'Bedroom', '低噪': 'Low noise', '咖啡': 'Coffee', '电热壶': 'Electric kettle', '温控': 'Temperature control', '防晒': 'Sunscreen', '护肤': 'Skincare', '吹风机': 'Hair dryer', '护发': 'Hair care', '家用': 'Home use', '面膜': 'Face masks', '补水': 'Hydration', '舒缓': 'Soothing', '挂耳': 'Drip bags', '办公室': 'Office', '坚果': 'Nuts', '零食': 'Snacks', '加餐': 'Snack time', '巧克力': 'Chocolate', '黑巧': 'Dark chocolate',
-  '屏幕': 'Display', '内存': 'Memory', '存储': 'Storage', '重量': 'Weight', '续航': 'Battery life', '连接': 'Connectivity', '充电': 'Charging', '防水': 'Water resistance', '定位': 'Positioning', '鞋面': 'Upper', '中底': 'Midsole', '适用': 'Best for', '材质': 'Material', '容量': 'Capacity', '尺寸': 'Dimensions', '内袋': 'Inner pockets', '面料': 'Fabric', '版型': 'Fit', '腰型': 'Waist', '洗涤': 'Care', '导航': 'Navigation', '吸力': 'Suction', '集尘': 'Dust collection', '越障': 'Obstacle clearance', '适用面积': 'Coverage', '滤网': 'Filter', '噪声': 'Noise', '功率': 'Power', '温控': 'Temperature control', '保温': 'Keep warm', '规格': 'Size', '防护': 'Protection', '肤感': 'Feel', '使用': 'Use', '风速': 'Air speed', '温度': 'Temperature', '数量': 'Quantity', '类型': 'Type', '单片精华': 'Essence per mask', '建议频率': 'Suggested frequency', '单袋': 'Per bag', '烘焙': 'Roast', '产地': 'Origin', '内容': 'Contents', '储存': 'Storage', '可可含量': 'Cocoa content', '净含量': 'Net weight',
-  '14 英寸 2.8K': '14-inch 2.8K', '32GB': '32GB', '1TB SSD': '1TB SSD', '1.25kg': '1.25 kg', '30 小时': '30 hours', '蓝牙 5.3': 'Bluetooth 5.3', '250g': '250 g', 'USB-C': 'USB-C', '1.43 英寸 AMOLED': '1.43-inch AMOLED', '最长 12 天': 'Up to 12 days', '5ATM': '5 ATM', '双频 GNSS': 'Dual-band GNSS', '工程网布': 'Engineered mesh', '缓震泡棉': 'Cushioning foam', '约 275g': 'Approx. 275 g', '公路慢跑': 'Road running', '防泼水织物': 'Water-repellent fabric', '18L': '18 L', '42 × 29 × 14cm': '42 × 29 × 14 cm', '3 个': '3', '98% 棉，2% 氨纶': '98% cotton, 2% elastane', '宽松直筒': 'Relaxed straight leg', '高腰': 'High rise', '冷水机洗': 'Machine wash cold', '激光导航': 'Laser navigation', '6000Pa': '6000 Pa', '自动集尘': 'Auto-emptying', '20mm': '20 mm', '20–32㎡': '20–32 m²', '复合滤网': 'Composite filter', '最低 20dB': 'As low as 20 dB', '32W': '32 W', '0.8L': '0.8 L', '40–100℃': '40–100°C', '60 分钟': '60 minutes', '1200W': '1200 W', '50ml': '50 ml', 'SPF50+ PA++++': 'SPF50+ PA++++', '清爽': 'Lightweight', '面部与身体': 'Face and body', '1600W': '1600 W', '3 档': '3 settings', '4 档': '4 settings', '430g': '430 g', '10 片': '10 sheets', '贴片面膜': 'Sheet mask', '25ml': '25 ml', '每周 2–3 次': '2–3 times per week', '10 袋': '10 bags', '10g': '10 g', '中度': 'Medium', '多产地拼配': 'Multi-origin blend', '30 袋': '30 packs', '25g': '25 g', '混合坚果与果干': 'Mixed nuts and dried fruit', '阴凉干燥处': 'Cool, dry place', '72%': '72%', '150g': '150 g', '3 盒': '3 boxes', '18–22℃': '18–22°C',
+  '数码电子': 'Digital & Electronics',
+  '服饰鞋包': 'Fashion & Bags',
+  '家居生活': 'Home & Living',
+  '美妆护肤': 'Beauty & Skincare',
+  '食品饮料': 'Food & Drinks',
 };
 
 const chineseText = Object.fromEntries(Object.entries(englishText).map(([zh, en]) => [en, zh]));

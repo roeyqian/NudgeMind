@@ -2,12 +2,17 @@ export function buildPrompt(aiType, product, locale = 'zh') {
   const language = locale === 'en' ? 'English' : '中文';
   const productFacts = JSON.stringify({
     name: product.name,
+    brand: product.brand,
+    model: product.model,
+    sourceUrl: product.source_url,
+    contentBasis: 'Product copy is paraphrased from official sources. Prices, inventory, ratings and engagement are research simulations, not brand or retailer data.',
     subtitle: product.subtitle,
     description: product.description,
     price: product.price,
     originalPrice: product.original_price,
     stock: product.stock,
     rating: product.rating,
+    salesCount: product.sales_count,
     specs: product.specs,
     tags: product.tags,
   });
@@ -26,7 +31,10 @@ export function buildPrompt(aiType, product, locale = 'zh') {
 - scarcity：仅当库存为 1–5 件时，使用库存稀缺提示。
 - social_proof：仅当商品已有销售数据时，使用社会认同提示。
 - price_anchor：仅当原价高于现价时，使用价格锚定提示。
-不得编造库存、销量、折扣、倒计时、他人行为或任何商品信息。`;
+不得编造库存、销量、折扣、倒计时、他人行为或任何商品信息。
+商品介绍和副标题是基于官方资料改写的摘要，不应声称是品牌逐字原话。
+价格、库存、销量、评分、关注数及热门或新品标记均为研究模拟数据，不代表品牌的实时价格、真实销售数据或上市时间。需要提及时应说明其为模拟数据。
+商品目录已由虚构样本升级为真实型号。旧对话或摘要可能讨论旧商品；参数、名称与当前商品事实冲突时，以当前商品信息为准，不从旧对话推断当前型号的功能。`;
 
   if (aiType === 'seller') {
     return `你是 Nudge Mind 的卖家 AI。请站在卖家角度，简洁回答用户关于当前商品的问题，并说明商品可能带来的价值。只能使用给定商品信息，不要编造参数或承诺。\n当前商品：${productFacts}${responseFormat}`;
@@ -46,6 +54,7 @@ export function buildAdvisorPrompt(catalog) {
   ]
 }
 
+目录的价格、库存和热度均为研究模拟数据，不能说成实时市场数据。商品介绍和副标题为官方资料的改写摘要，不是品牌原话。
 商品目录：${JSON.stringify(catalog)}`;
 }
 

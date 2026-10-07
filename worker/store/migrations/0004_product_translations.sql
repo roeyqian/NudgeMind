@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS product_translations (
   FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 );
 
-INSERT OR REPLACE INTO product_translations (product_id, locale, name, subtitle, description, specs_json, tags_json) VALUES
+WITH translations (product_id, locale, name, subtitle, description, specs_json, tags_json) AS (
+VALUES
   ('prod_016', 'en', 'Portable Reading Tablet 11', 'Eye-friendly large display for reading anywhere', 'An 11-inch tablet with a high-refresh-rate display and stylus support for reading, note-taking, and entertainment.', '{"Display":"11-inch 2.5K","Storage":"256GB","Battery life":"Up to 14 hours","Weight":"480 g"}', '["Tablet","Reading","Handwriting"]'),
   ('prod_017', 'en', 'Portable Bluetooth Speaker', 'Compact body with outdoor stereo sound', 'A water-repellent portable speaker with Bluetooth and stereo pairing for camping, gatherings, and desktop listening.', '{"Battery life":"16 hours","Protection":"IP67","Connectivity":"Bluetooth 5.3","Weight":"520 g"}', '["Speaker","Outdoors","Bluetooth"]'),
   ('prod_018', 'en', '87-Key Mechanical Keyboard', 'Linear switches in a compact layout', 'An 87-key compact keyboard with hot-swappable sockets and wired or wireless connections for work and casual gaming.', '{"Layout":"87 keys","Connectivity":"Tri-mode","Switches":"Linear","Battery":"4000mAh"}', '["Keyboard","Work","Desk setup"]'),
@@ -55,4 +56,8 @@ INSERT OR REPLACE INTO product_translations (product_id, locale, name, subtitle,
   ('prod_057', 'en', 'High-Protein Beef Jerky', 'Savory and chewy energy replenishment', 'Low-temperature baked beef jerky in small packs for portable snacks after exercise or while travelling.', '{"Net weight":"180 g","Protein":"30 g per 100 g","Packaging":"Individual sachets","Flavour":"Five spice"}', '["Beef jerky","High protein","Snack time"]'),
   ('prod_058', 'en', 'Handmade Butter Cookie Gift Tin', 'Buttery, crisp cookies for sharing', 'An assortment of butter cookies in a tin, suitable for holiday sharing, afternoon tea, and everyday hosting.', '{"Net weight":"360 g","Flavours":"4","Packaging":"Tin","Storage":"Cool, dry place"}', '["Cookies","Biscuits","Gift set"]'),
   ('prod_059', 'en', 'Zero-Sugar Sparkling Water, 12 Cans', 'Refreshing choices in several flavours', 'Zero-sugar sparkling water in 330 ml cans for meals, office fridges, and hydration after exercise.', '{"Quantity":"12 cans","Per can":"330 ml","Sugar":"0 sugar","Flavours":"3 options"}', '["Sparkling water","Drinks","Zero sugar"]'),
-  ('prod_060', 'en', 'Mixed-Grain Porridge Rice Set', 'Blended grains for easy porridge', 'Small packs of mixed-grain rice for breakfast porridge, steamed rice, or everyday pantry storage.', '{"Net weight":"1.5 kg","Quantity":"5 bags","Contents":"Mixed grains","Storage":"Cool, dry place"}', '["Mixed grains","Breakfast","Grains"]');
+  ('prod_060', 'en', 'Mixed-Grain Porridge Rice Set', 'Blended grains for easy porridge', 'Small packs of mixed-grain rice for breakfast porridge, steamed rice, or everyday pantry storage.', '{"Net weight":"1.5 kg","Quantity":"5 bags","Contents":"Mixed grains","Storage":"Cool, dry place"}', '["Mixed grains","Breakfast","Grains"]')
+)
+INSERT OR REPLACE INTO product_translations (product_id, locale, name, subtitle, description, specs_json, tags_json)
+SELECT t.product_id, t.locale, t.name, t.subtitle, t.description, t.specs_json, t.tags_json
+FROM translations t JOIN products p ON p.id = t.product_id;

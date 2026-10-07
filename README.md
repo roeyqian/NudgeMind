@@ -54,6 +54,37 @@ npm run dev
 
 当同一用户、商品和 AI 角色的聊天上下文超过 `AI_CONTEXT_SUMMARY_THRESHOLD`（默认 `10000` 个字符）时，Worker 会让模型将较早对话总结并持久化。之后的聊天请求会使用该摘要和最近的 `AI_CONTEXT_RECENT_CHARS`（默认 `4000` 个字符）作为上文。可在 `worker/wrangler.jsonc` 的 `vars` 中覆盖这两个值。
 
+## 真实商品目录
+
+目录包含 90 件真实品牌商品，每类 18 件，沿用 `prod_001` 至 `prod_090`。
+商品名称、型号、规格和中英文介绍根据品牌官方产品页或说明资料整理；副标题及宣传文案为改写摘要，并非品牌逐字口号。每件商品都保存官方链接与核对日期，详情页可直接查看来源。部分商品对应海外市场版本，支持功能、配方、包装及在售状态应以链接中的具体版本为准。
+
+- `worker/store/catalog.mjs`：唯一商品内容来源，包含品牌、型号、中英文文案、规格、标签、官方链接及研究价格。
+- `worker/store/research-fixtures.json`：模拟库存、销量、评分及热门/新品标记，保留原研究数据设置。
+- `worker/store/seed.sql` 与 `worker/store/migrations/0007_real_product_catalog.sql`：从目录生成的初始化和升级 SQL，勿单独编辑。
+
+修改目录后生成并检查 SQL：
+
+```powershell
+cd worker
+npm run catalog:build
+npm run catalog:check
+```
+
+新数据库先运行全部迁移，再运行 seed；已有数据库只需应用新增的 `0007` 迁移，无需清库。迁移更新商品内容与模拟价格，补齐全部英文翻译，保留已有库存、销量、评分、商品 ID、购物车关联、订单和对话。历史订单名称、价格与对话作为原研究记录保留；AI 提示词要求使用当前型号事实，避免沿用旧对话中的虚构参数。
+
+```powershell
+# 在实际使用的数据库上执行升级（二选一）
+npm run db:migrate:local
+npm run db:migrate:remote
+```
+
+`0004` 与 `0005` 补充了新库初始化依赖：前者只为已存在商品写入翻译，后者先补齐分类，确保开启外键时也能在 seed 前完成迁移。已应用的历史迁移不需要重新执行。
+
+`0007` 在更新前将已有商品和英文翻译保存到 `catalog_0007_products_backup` 与 `catalog_0007_translations_backup`。需要回退时，配合升级前代码，执行 `worker/store/rollback/0007_real_product_catalog.sql`；它恢复被升级的旧商品内容与价格，保留当前库存及用户记录。备份表保留不删除；回退 SQL 不改变 D1 迁移登记，后续再次升级需显式执行升级 SQL。新库中原本没有的商品不会因回退被删除。
+
+价格为人民币研究模拟定价，库存、销量、评分和热门/新品标记均为模拟数据，不代表品牌或零售商实时数据。没有可靠原价依据的商品不展示折扣原价。商品图继续使用根据当前名称与标签生成的示意图；本次没有引入商品实拍照片。迁移应用及部署需要在目标环境执行，Worker URL 的访问验证由用户完成。
+
 ## 数据边界
 
 购买为研究用模拟购买，不接入真实支付。订单会保存为 `completed`，并扣减样本库存。项目不会连接或访问 Shop Assistant 的 Worker URL。

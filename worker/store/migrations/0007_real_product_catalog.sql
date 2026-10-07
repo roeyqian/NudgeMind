@@ -2,6 +2,23 @@
 -- Real product facts and paraphrased copy; CNY prices and engagement/inventory are research simulations.
 -- No unverified original prices or real-world sales/ratings are claimed.
 
+CREATE TABLE IF NOT EXISTS product_sources (
+  product_id TEXT PRIMARY KEY,
+  brand TEXT NOT NULL,
+  model TEXT NOT NULL,
+  source_url TEXT NOT NULL,
+  source_checked_at TEXT NOT NULL,
+  content_basis TEXT NOT NULL,
+  price_basis TEXT NOT NULL,
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+
+-- Retain pre-upgrade content for an explicit rollback without deleting user records.
+CREATE TABLE IF NOT EXISTS catalog_0007_products_backup AS
+  SELECT * FROM products WHERE id IN ('prod_001', 'prod_002', 'prod_003', 'prod_004', 'prod_005', 'prod_006', 'prod_007', 'prod_008', 'prod_009', 'prod_010', 'prod_011', 'prod_012', 'prod_013', 'prod_014', 'prod_015', 'prod_016', 'prod_017', 'prod_018', 'prod_019', 'prod_020', 'prod_021', 'prod_022', 'prod_023', 'prod_024', 'prod_025', 'prod_026', 'prod_027', 'prod_028', 'prod_029', 'prod_030', 'prod_031', 'prod_032', 'prod_033', 'prod_034', 'prod_035', 'prod_036', 'prod_037', 'prod_038', 'prod_039', 'prod_040', 'prod_041', 'prod_042', 'prod_043', 'prod_044', 'prod_045', 'prod_046', 'prod_047', 'prod_048', 'prod_049', 'prod_050', 'prod_051', 'prod_052', 'prod_053', 'prod_054', 'prod_055', 'prod_056', 'prod_057', 'prod_058', 'prod_059', 'prod_060', 'prod_061', 'prod_062', 'prod_063', 'prod_064', 'prod_065', 'prod_066', 'prod_067', 'prod_068', 'prod_069', 'prod_070', 'prod_071', 'prod_072', 'prod_073', 'prod_074', 'prod_075', 'prod_076', 'prod_077', 'prod_078', 'prod_079', 'prod_080', 'prod_081', 'prod_082', 'prod_083', 'prod_084', 'prod_085', 'prod_086', 'prod_087', 'prod_088', 'prod_089', 'prod_090');
+CREATE TABLE IF NOT EXISTS catalog_0007_translations_backup AS
+  SELECT * FROM product_translations WHERE locale = 'en' AND product_id IN ('prod_001', 'prod_002', 'prod_003', 'prod_004', 'prod_005', 'prod_006', 'prod_007', 'prod_008', 'prod_009', 'prod_010', 'prod_011', 'prod_012', 'prod_013', 'prod_014', 'prod_015', 'prod_016', 'prod_017', 'prod_018', 'prod_019', 'prod_020', 'prod_021', 'prod_022', 'prod_023', 'prod_024', 'prod_025', 'prod_026', 'prod_027', 'prod_028', 'prod_029', 'prod_030', 'prod_031', 'prod_032', 'prod_033', 'prod_034', 'prod_035', 'prod_036', 'prod_037', 'prod_038', 'prod_039', 'prod_040', 'prod_041', 'prod_042', 'prod_043', 'prod_044', 'prod_045', 'prod_046', 'prod_047', 'prod_048', 'prod_049', 'prod_050', 'prod_051', 'prod_052', 'prod_053', 'prod_054', 'prod_055', 'prod_056', 'prod_057', 'prod_058', 'prod_059', 'prod_060', 'prod_061', 'prod_062', 'prod_063', 'prod_064', 'prod_065', 'prod_066', 'prod_067', 'prod_068', 'prod_069', 'prod_070', 'prod_071', 'prod_072', 'prod_073', 'prod_074', 'prod_075', 'prod_076', 'prod_077', 'prod_078', 'prod_079', 'prod_080', 'prod_081', 'prod_082', 'prod_083', 'prod_084', 'prod_085', 'prod_086', 'prod_087', 'prod_088', 'prod_089', 'prod_090');
+
 INSERT INTO categories (id, name, icon, sort_order) VALUES
   ('cat_digital', '数码电子', '📱', 1),
   ('cat_fashion', '服饰鞋包', '👟', 2),
@@ -101,7 +118,15 @@ INSERT INTO products (id, category_id, name, subtitle, description, price, origi
   ('prod_088', 'cat_food', 'Oatly 咖啡大师燕麦饮 1L', '为咖啡调配，也可直接饮用', 'Barista Edition 为 Oatly 面向咖啡制作的燕麦饮，可用于咖啡、打奶泡或直接饮用。本目录为 1L 单盒；这是植物饮料，成分与开封后储存方式按对应包装核对。', 25, NULL, 186, 1253, 4.6, '{"品牌":"Oatly","型号 / 系列":"Oat Drink Barista Edition","容量":"1L","类型":"燕麦植物饮","版本":"Barista Edition"}', '["燕麦饮","Oatly","Oat Drink Barista Edition"]', 1, 0, '2026-10-07', '2026-10-07'),
   ('prod_089', 'cat_food', '李锦记蒜蓉辣椒酱 226g', '蒜香辣味，蘸拌与烹调', '李锦记蒜蓉辣椒酱将辣椒与蒜蓉结合，适合蘸食、拌面或烹调。本目录对应香港官方 226g 罐装，成分、过敏原和开封后储存方式以包装为准。', 19, NULL, 271, 2034, 4.7, '{"品牌":"Lee Kum Kee","型号 / 系列":"Chili Garlic Sauce","净含量":"226g","风味":"蒜蓉辣椒","包装":"罐装"}', '["辣椒酱","Lee Kum Kee","Chili Garlic Sauce"]', 0, 1, '2026-10-07', '2026-10-07'),
   ('prod_090', 'cat_food', '日清合味道海鲜风味杯面 75g', '海鲜风味，热水冲泡', 'Nissin Cup Noodles Seafood 为海鲜风味杯面，本目录按新加坡官方产品页采用 75g 单杯规格。按照杯身指引冲泡，配料与过敏原须核对。', 9, NULL, 239, 1724, 4.5, '{"品牌":"Nissin","型号 / 系列":"Cup Noodles Seafood","净含量":"75g","口味":"海鲜","数量":"1 杯"}', '["杯面","Nissin","Cup Noodles Seafood"]', 0, 0, '2026-10-07', '2026-10-07')
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET
+  name = excluded.name,
+  subtitle = excluded.subtitle,
+  description = excluded.description,
+  price = excluded.price,
+  original_price = excluded.original_price,
+  specs_json = excluded.specs_json,
+  tags_json = excluded.tags_json,
+  updated_at = datetime('now');
 
 INSERT INTO product_translations (product_id, locale, name, subtitle, description, specs_json, tags_json) VALUES
   ('prod_001', 'en', 'Apple MacBook Air 13-inch M2 8GB / 256GB', 'M2 performance in a fanless design', 'An M2 laptop with a 13.6-inch Liquid Retina display and MagSafe 3 charging. Its fanless design suits portable work, study and everyday creative tasks; battery life varies with use.', '{"Brand":"Apple","Model / series":"MacBook Air (M2, 2022)","Display":"13.6-inch, 2560 × 1664","Memory / storage":"8GB / 256GB SSD","Weight":"1.24 kg"}', '["Laptop","Apple","MacBook Air (M2, 2022)"]'),
@@ -194,7 +219,12 @@ INSERT INTO product_translations (product_id, locale, name, subtitle, descriptio
   ('prod_088', 'en', 'Oatly Oat Drink Barista Edition 1L', 'Made for coffee, also enjoyed on its own', 'Oatly Barista Edition is an oat drink designed for coffee and foaming, also suitable to drink on its own. This is one 1 L carton; check the regional pack for ingredients and storage after opening.', '{"Brand":"Oatly","Model / series":"Oat Drink Barista Edition","Volume":"1 L","Type":"Oat drink","Edition":"Barista Edition"}', '["Oat drink","Oatly","Oat Drink Barista Edition"]'),
   ('prod_089', 'en', 'Lee Kum Kee Chili Garlic Sauce 226g', 'Garlic and chilli for dipping and cooking', 'Lee Kum Kee Chili Garlic Sauce combines chilli and garlic for dipping, noodles and cooking. This is the official Hong Kong 226 g jar; consult its pack for ingredients, allergens and storage after opening.', '{"Brand":"Lee Kum Kee","Model / series":"Chili Garlic Sauce","Net weight":"226 g","Flavour":"Chilli and garlic","Packaging":"Jar"}', '["Chilli sauce","Lee Kum Kee","Chili Garlic Sauce"]'),
   ('prod_090', 'en', 'Nissin Cup Noodles Seafood 75g', 'Seafood flavour in a convenient cup', 'Nissin Cup Noodles Seafood is a seafood-flavoured instant noodle cup. This listing follows the Singapore official 75 g cup; prepare as directed and check ingredients and allergens.', '{"Brand":"Nissin","Model / series":"Cup Noodles Seafood","Net weight":"75 g","Flavour":"Seafood","Quantity":"1 cup"}', '["Cup noodles","Nissin","Cup Noodles Seafood"]')
-ON CONFLICT (product_id, locale) DO NOTHING;
+ON CONFLICT (product_id, locale) DO UPDATE SET
+  name = excluded.name,
+  subtitle = excluded.subtitle,
+  description = excluded.description,
+  specs_json = excluded.specs_json,
+  tags_json = excluded.tags_json;
 
 INSERT INTO product_sources (product_id, brand, model, source_url, source_checked_at, content_basis, price_basis) VALUES
   ('prod_001', 'Apple', 'MacBook Air (M2, 2022)', 'https://support.apple.com/en-us/111867', '2026-10-07', 'official_source_paraphrase', 'research_simulation_cny'),
@@ -287,4 +317,10 @@ INSERT INTO product_sources (product_id, brand, model, source_url, source_checke
   ('prod_088', 'Oatly', 'Oat Drink Barista Edition', 'https://www.oatly.com/products/oat-drink/oat-drink-barista-edition-1l', '2026-10-07', 'official_source_paraphrase', 'research_simulation_cny'),
   ('prod_089', 'Lee Kum Kee', 'Chili Garlic Sauce', 'https://shop.lkk.com/en/products/chili-garlic-sauce-226g', '2026-10-07', 'official_source_paraphrase', 'research_simulation_cny'),
   ('prod_090', 'Nissin', 'Cup Noodles Seafood', 'https://sg.nissin.com/en_sg/brands/items/9613/', '2026-10-07', 'official_source_paraphrase', 'research_simulation_cny')
-ON CONFLICT (product_id) DO NOTHING;
+ON CONFLICT (product_id) DO UPDATE SET
+  brand = excluded.brand,
+  model = excluded.model,
+  source_url = excluded.source_url,
+  source_checked_at = excluded.source_checked_at,
+  content_basis = excluded.content_basis,
+  price_basis = excluded.price_basis;

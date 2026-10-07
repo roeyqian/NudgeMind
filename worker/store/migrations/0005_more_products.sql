@@ -1,3 +1,11 @@
+-- Supply category dependencies when migrating a fresh database before seeding.
+INSERT OR IGNORE INTO categories (id, name, icon, sort_order) VALUES
+  ('cat_digital', '数码电子', '📱', 1),
+  ('cat_fashion', '服饰鞋包', '👟', 2),
+  ('cat_home', '家居生活', '🏠', 3),
+  ('cat_beauty', '美妆护肤', '✨', 4),
+  ('cat_food', '食品饮料', '☕', 5);
+
 -- Add six products in each existing catalog category.
 INSERT OR IGNORE INTO categories (id, name, icon, sort_order) VALUES
   ('cat_digital', '数码电子', '📱', 1),

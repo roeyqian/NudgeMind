@@ -147,6 +147,12 @@ input:focus, textarea:focus { border-color: #ad3c4b; box-shadow: 0 0 0 3px rgba(
 .detail-info { padding: 20px 0; }
 .detail-info h1 { margin: 17px 0 7px; font-size: clamp(40px, 4vw, 58px); line-height: 1.1; }
 .detail-subtitle { color: #66575b; font-size: 18px; }
+.catalog-disclosure, .product-source { color: #66575b; font-size: 12px; line-height: 1.7; }
+.catalog-disclosure { margin: 0 0 16px; }
+.product-source { margin: 16px 0; }
+.product-source a { color: inherit; text-underline-offset: 3px; }
+.product-source > span { display: block; margin-top: 4px; }
+.product-source p { margin: 6px 0; }
 .detail-price { display: flex; align-items: baseline; gap: 13px; margin: 26px 0; }
 .detail-price strong { color: #9e4d32; font-size: 32px; }
 .detail-price s { color: #9fa5a1; }
@@ -445,6 +451,8 @@ input:focus, textarea:focus { border-color: #ad3c4b; box-shadow: 0 0 0 3px rgba(
 :root[data-theme='dark'] .empty-state { border-color: #505056; background: rgba(34, 35, 38, .72); }
 :root[data-theme='dark'] .back-button,
 :root[data-theme='dark'] .detail-subtitle,
+:root[data-theme='dark'] .catalog-disclosure,
+:root[data-theme='dark'] .product-source,
 :root[data-theme='dark'] .detail-description { color: #d1c6c8; }
 :root[data-theme='dark'] .spec-panel dt,
 :root[data-theme='dark'] .rating span { color: #aaaeb0; }

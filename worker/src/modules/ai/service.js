@@ -17,6 +17,7 @@ export async function getAdvisorRecommendations({ request, env }) {
 
   const { results } = await env.nudge_mind_db.prepare(`
     SELECT p.*, c.name AS category_name,
+      ps.brand, ps.model, ps.source_url, ps.source_checked_at, ps.content_basis, ps.price_basis,
       COALESCE(pt.name, p.name) AS name,
       COALESCE(pt.subtitle, p.subtitle) AS subtitle,
       COALESCE(pt.description, p.description) AS description,
@@ -24,6 +25,7 @@ export async function getAdvisorRecommendations({ request, env }) {
       COALESCE(pt.tags_json, p.tags_json) AS tags_json
     FROM products p
     JOIN categories c ON c.id = p.category_id
+    LEFT JOIN product_sources ps ON ps.product_id = p.id
     LEFT JOIN product_translations pt ON pt.product_id = p.id AND pt.locale = ?
     ORDER BY p.is_hot DESC, p.sales_count DESC, p.created_at DESC
     LIMIT 100
@@ -31,6 +33,9 @@ export async function getAdvisorRecommendations({ request, env }) {
   const products = results.map(normalizeProduct);
   const catalog = products.map((product) => ({
     id: product.id,
+    brand: product.brand,
+    model: product.model,
+    sourceUrl: product.source_url,
     name: product.name,
     subtitle: product.subtitle,
     description: product.description,
@@ -187,13 +192,14 @@ export async function chat({ request, env }) {
   if (!AI_TYPES.has(aiType)) throw { status: 400, message: 'AI 角色无效' };
 
   const row = await env.nudge_mind_db.prepare(`
-    SELECT p.*,
+    SELECT p.*, ps.brand, ps.model, ps.source_url, ps.source_checked_at, ps.content_basis, ps.price_basis,
       COALESCE(pt.name, p.name) AS name,
       COALESCE(pt.subtitle, p.subtitle) AS subtitle,
       COALESCE(pt.description, p.description) AS description,
       COALESCE(pt.specs_json, p.specs_json) AS specs_json,
       COALESCE(pt.tags_json, p.tags_json) AS tags_json
     FROM products p
+    LEFT JOIN product_sources ps ON ps.product_id = p.id
     LEFT JOIN product_translations pt ON pt.product_id = p.id AND pt.locale = ?
     WHERE p.id = ?
   `).bind(locale, productId).first();
