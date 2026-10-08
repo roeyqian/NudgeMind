@@ -86,5 +86,5 @@ Return only one parseable JSON object, with no Markdown or extra text:
   ]
 }
 
-Include every supplied product ID exactly once. The interface will show an explicit removal button only for items where should_remove is true. Cart facts: ${JSON.stringify(items)}`;
+Include every supplied product ID exactly once. Keep the overall message to 1–2 sentences and each reason to a concise paragraph covering the four required points. Do not repeat the entire theory catalog or cart facts. The interface will show an explicit removal button only for items where should_remove is true. Cart facts: ${JSON.stringify(items)}`;
 }

@@ -151,7 +151,8 @@ const englishApiErrors = {
 const englishAiErrors = {
   AI_NOT_CONFIGURED: 'AI service has no API key configured',
   AI_CONNECTION_FAILED: 'Could not connect to the AI service. Check the connection or provider status',
-  AI_OUTPUT_TRUNCATED: 'AI output exceeded the length limit, so the answer is incomplete',
+  AI_OUTPUT_TRUNCATED: 'The AI provider returned a truncated reply. It was not used as a complete result. Please retry',
+  AI_CHECKOUT_INVALID_RESPONSE: 'AI did not return a complete purchase review. Please retry',
   AI_EMPTY_RESPONSE: 'AI service did not return valid content',
   INTERNAL_ERROR: 'Internal server error. Contact an administrator with the request ID',
 };

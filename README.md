@@ -52,7 +52,13 @@ npm run dev
 
 ## AI 请求失败排查
 
-聊天报错会显示 HTTP 状态、应用错误码和请求 ID；DeepSeek 返回错误时，还会显示其状态和错误详情。`AI_UPSTREAM_401` 表示上游 API Key 无效，`AI_UPSTREAM_402` 表示余额不足，`AI_UPSTREAM_422` 通常要检查模型名或请求参数，`AI_UPSTREAM_429` 表示限流，`AI_UPSTREAM_500` / `AI_UPSTREAM_503` 表示上游暂时故障或过载。AI 问题和回复不再受字符数限制；模型达到输出 token 上限时，Worker 会继续处理已返回的非空内容，原有 `max_tokens` 设置保持不变。`INTERNAL_ERROR` 表示 Worker 内部或数据库错误，应使用请求 ID 在 Worker 日志中定位。连接失败及 429/5xx 上游错误会在单次聊天请求内最多重试两次；配置和额度错误不会重试。
+**强制规则：严禁项目设置输出 token 上限或主动截断 AI 输出。** 所有 AI 调用（卖家聊天、管家聊天、商品推荐、购买审阅、上下文摘要）均不发送 `max_tokens`、`max_completion_tokens`、`max_output_tokens` 等输出限额参数，不设置默认 token 预算、上限裁剪函数或调用方 token 限制。后续修改不得重新引入这些限制，也不得将被截断的回复作为完整结果展示、写入聊天记录或持久化为摘要。
+
+上游模型的默认输出长度、上下文窗口及服务端硬限制不受本项目控制；省略限额参数不等于模型能够无限输出。所有 AI 调用统一检查 `finish_reason`，若上游返回 `length`，拒绝该不完整结果并返回 `AI_OUTPUT_TRUNCATED`，不能静默当作成功。
+
+确认模拟购买会先调用管家购买审阅，成功后才进入最终确认。审阅按最多 3 件商品分批生成，不设置输出 token 限额。遇到输出截断或缺项、重复 ID、字段格式错误时，该批会自动重试一次。最终失败会显示 `AI_OUTPUT_TRUNCATED` 或 `AI_CHECKOUT_INVALID_RESPONSE`，保留购买信息和购物车，不自动下单，也不把失败分析当作成功结果。此前这些无错误码的审阅校验失败会被错误地显示为 `INTERNAL_ERROR`。部署后需由用户在网站验证购买审阅流程。
+
+聊天报错会显示 HTTP 状态、应用错误码和请求 ID；DeepSeek 返回错误时，还会显示其状态和错误详情。`AI_UPSTREAM_401` 表示上游 API Key 无效，`AI_UPSTREAM_402` 表示余额不足，`AI_UPSTREAM_422` 通常要检查模型名或请求参数，`AI_UPSTREAM_429` 表示限流，`AI_UPSTREAM_500` / `AI_UPSTREAM_503` 表示上游暂时故障或过载。`AI_OUTPUT_TRUNCATED` 表示上游回复被截断，项目已拒绝将其作为完整结果使用。`INTERNAL_ERROR` 表示 Worker 内部或数据库错误，应使用请求 ID 在 Worker 日志中定位。连接失败及 429/5xx 上游错误会在单次聊天请求内最多重试两次；配置和额度错误不会重试。
 
 ## AI 上下文摘要
 
@@ -138,7 +144,11 @@ npm run dev
 
 ## AI Request Errors
 
-Chat errors display the HTTP status, application error code, and request ID. When DeepSeek returns an error, its status and error details are also displayed. `AI_UPSTREAM_401` means the upstream API key is invalid; `AI_UPSTREAM_402` means the account has insufficient balance; `AI_UPSTREAM_422` usually calls for checking the model name or request parameters; and `AI_UPSTREAM_429` means rate limiting. `AI_UPSTREAM_500` and `AI_UPSTREAM_503` indicate a temporary upstream failure or overload. AI questions and replies no longer have a character limit. If the model reaches its output token limit, the Worker continues processing any nonempty content already returned; the existing `max_tokens` setting remains unchanged. `INTERNAL_ERROR` indicates a Worker or database error; use the request ID to locate it in the Worker logs. Connection failures and upstream 429/5xx errors are retried up to twice within a single chat request. Configuration and balance errors are not retried.
+**Mandatory rule: application-imposed output token limits and deliberate truncation of AI output are prohibited.** All AI calls, including seller/guardian chats, recommendations, checkout reviews and context summaries, omit `max_tokens`, `max_completion_tokens`, `max_output_tokens` and equivalent output limits. Do not reintroduce token budgets or clamp functions. Truncated replies must never be displayed as complete results, stored as chat replies or persisted as summaries.
+
+The application cannot remove the upstream model's default output limits, context window or server-side limits; omitting these parameters does not guarantee unlimited output. Every AI call checks `finish_reason` and rejects `length` responses with `AI_OUTPUT_TRUNCATED`. Checkout reviews process up to three products per batch without an output token budget and retry an incomplete or invalid batch once.
+
+Chat errors display the HTTP status, application error code, and request ID. When DeepSeek returns an error, its status and error details are also displayed. `AI_UPSTREAM_401` means the upstream API key is invalid; `AI_UPSTREAM_402` means the account has insufficient balance; `AI_UPSTREAM_422` usually calls for checking the model name or request parameters; and `AI_UPSTREAM_429` means rate limiting. `AI_UPSTREAM_500` and `AI_UPSTREAM_503` indicate a temporary upstream failure or overload. `AI_OUTPUT_TRUNCATED` means the provider returned an incomplete reply which the application rejected. `INTERNAL_ERROR` indicates a Worker or database error; use the request ID to locate it in the Worker logs. Connection failures and upstream 429/5xx errors are retried up to twice within a single chat request. Configuration and balance errors are not retried.
 
 ## AI Context Summaries
 

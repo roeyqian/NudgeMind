@@ -69,7 +69,7 @@ export async function getAdvisorRecommendations({ request, env }) {
   }));
   const rawResponse = await completeChat(env, buildAdvisorPrompt(catalog), [
     { role: 'user', content: requirement },
-  ], request.signal, { temperature: 0.3, maxTokens: 700, jsonOutput: true });
+  ], request.signal, { temperature: 0.3, jsonOutput: true });
   const parsed = parseJsonObject(rawResponse);
   const byId = new Map(products.map((product) => [product.id, product]));
   const seen = new Set();
@@ -197,25 +197,17 @@ export async function getCheckoutGuardianIntervention({ request, env }) {
         .slice(0, 6).map((entry) => ({ messageId: entry.id, text: String(entry.content).slice(0, 1500) })),
     };
   });
-  const rawResponse = await completeChat(env, buildCheckoutGuardianPrompt(items, locale), [
-    { role: 'user', content: locale === 'en' ? 'Review this cart before checkout.' : '请在确认购买前审阅这个购物车。' },
-  ], request.signal, { temperature: 0.25, maxTokens: Math.min(6000, 500 + items.length * 350), jsonOutput: true });
-  const parsed = parseJsonObject(rawResponse);
-  if (!parsed || typeof parsed.message !== 'string' || !parsed.message.trim() || !Array.isArray(parsed.items)
-    || parsed.items.length !== items.length
-    || new Set(parsed.items.map((item) => item?.product_id)).size !== items.length
-    || parsed.items.some((entry) => !items.some((item) => item.productId === entry?.product_id)
-      || typeof entry.should_remove !== 'boolean' || typeof entry.reason !== 'string' || !entry.reason.trim())) {
-    throw { status: 502, message: 'AI 未返回完整的购买分析，请重试' };
+  // Review small groups without imposing an output token limit.
+  const reviews = [];
+  for (let offset = 0; offset < items.length; offset += 3) {
+    reviews.push(await reviewCheckoutBatch(env, items.slice(offset, offset + 3), locale, request.signal));
   }
   const recommendations = new Map(
-    Array.isArray(parsed?.items)
-      ? parsed.items.map((item) => [String(item?.product_id || ''), item])
-      : [],
+    reviews.flatMap((review) => review.items.map((item) => [item.product_id, item])),
   );
 
   return json({
-    message: String(parsed?.message || rawResponse || '').trim(),
+    message: [...new Set(reviews.map((review) => review.message.trim()))].join('\n\n'),
     items: items.map((item) => {
       const recommendation = recommendations.get(item.productId);
       return {
@@ -229,6 +221,36 @@ export async function getCheckoutGuardianIntervention({ request, env }) {
       };
     }),
   });
+}
+
+async function reviewCheckoutBatch(env, items, locale, signal) {
+  const messages = [
+    { role: 'user', content: locale === 'en' ? 'Review this cart before checkout.' : '请在确认购买前审阅这个购物车。' },
+  ];
+  const productIds = new Set(items.map((item) => item.productId));
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const rawResponse = await completeChat(env, buildCheckoutGuardianPrompt(items, locale), messages, signal, {
+        temperature: 0.25,
+        jsonOutput: true,
+      });
+      const parsed = parseJsonObject(rawResponse);
+      if (!parsed || typeof parsed.message !== 'string' || !parsed.message.trim() || !Array.isArray(parsed.items)
+        || parsed.items.length !== items.length
+        || new Set(parsed.items.map((item) => item?.product_id)).size !== items.length
+        || parsed.items.some((entry) => !productIds.has(entry?.product_id)
+          || typeof entry.should_remove !== 'boolean' || typeof entry.reason !== 'string' || !entry.reason.trim())) {
+        throw { status: 502, code: 'AI_CHECKOUT_INVALID_RESPONSE', message: 'AI 未返回完整的购买分析，请重试' };
+      }
+      return parsed;
+    } catch (error) {
+      const retryable = ['AI_OUTPUT_TRUNCATED', 'AI_CHECKOUT_INVALID_RESPONSE'].includes(error?.code);
+      if (attempt > 0 || !retryable || signal?.aborted) throw error;
+      messages.push({ role: 'user', content: locale === 'en'
+        ? 'The previous response was incomplete. Return valid JSON with every supplied product ID exactly once. Keep each reason concise while covering evidence, mechanism, uncertainty and a verification action.'
+        : '上次回复不完整。请返回有效 JSON，每个提供的商品 ID 恰好出现一次。每项理由简洁覆盖证据、机制、不确定性和核验建议。' });
+    }
+  }
 }
 
 export async function chat({ request, env }) {
@@ -260,7 +282,7 @@ export async function chat({ request, env }) {
     ...summaryAsContextMessage(context.summary, locale),
     ...context.history,
     { role: 'user', content: message },
-  ], request.signal, { jsonOutput: true, maxTokens: 900 });
+  ], request.signal, { jsonOutput: true });
   const aiResult = parseAiResponse(rawResponse, product);
   if (aiType === 'guardian') {
     aiResult.ui.scarcity = false;
@@ -316,7 +338,7 @@ async function loadConversationContext(env, userId, productId, aiType, product, 
   const nextSummary = await completeChat(env, buildSummaryPrompt(aiType, product, locale), [
     ...summaryAsContextMessage(summary, locale),
     ...stripRowId(older),
-  ], signal, { temperature: 0.2, maxTokens: 700 });
+  ], signal, { temperature: 0.2 });
   const normalizedSummary = nextSummary.trim();
   if (!normalizedSummary) throw { status: 502, message: 'AI 对话摘要未返回有效内容' };
 

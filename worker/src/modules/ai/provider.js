@@ -4,7 +4,6 @@ export async function completeChat(env, systemPrompt, messages, signal, options 
   const body = JSON.stringify({
     model: env.DEEPSEEK_MODEL || 'deepseek-flash',
     temperature: clampTemperature(options.temperature ?? env.AI_TEMPERATURE),
-    max_tokens: clampMaxTokens(options.maxTokens, 500),
     ...(options.jsonOutput ? { response_format: { type: 'json_object' } } : {}),
     messages: [{ role: 'system', content: systemPrompt }, ...messages],
   });
@@ -40,6 +39,9 @@ export async function completeChat(env, systemPrompt, messages, signal, options 
       };
     }
     const payload = await response.json().catch(() => null);
+    if (payload?.choices?.[0]?.finish_reason === 'length') {
+      throw { status: 502, code: 'AI_OUTPUT_TRUNCATED', message: 'AI 上游返回了截断的回复，未作为完整结果使用，请重试' };
+    }
     const content = payload?.choices?.[0]?.message?.content;
     if (typeof content !== 'string' || !content.trim()) {
       throw { status: 502, code: 'AI_EMPTY_RESPONSE', message: 'AI 服务未返回有效内容' };
@@ -70,9 +72,4 @@ function waitBeforeRetry(attempt, signal) {
 function clampTemperature(value) {
   const number = Number(value);
   return Number.isFinite(number) ? Math.max(0, Math.min(2, number)) : 0.5;
-}
-
-function clampMaxTokens(value, fallback) {
-  const number = Number(value);
-  return Number.isInteger(number) ? Math.max(1, Math.min(2_000, number)) : fallback;
 }
