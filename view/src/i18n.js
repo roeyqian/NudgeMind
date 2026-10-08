@@ -14,6 +14,12 @@ export const messages = {
 };
 
 Object.assign(messages.zh, {
+  requiredField: '必填',
+  optionalField: '选填',
+  purchaseNeeds: '购买需求',
+  purchaseNeedsPlaceholder: '例如：想买一副通勤用的耳机，需要降噪、佩戴舒适，预算 500 元以内。',
+  purchaseNeedsHint: '请具体说明自己想买什么，可补充用途、预算和偏好。',
+  purchaseNeedsRequired: '请填写购买需求，具体说明自己想买什么',
   guardianExposureNote: '浏览器报告进入视区的模拟刺激；不代表已影响你的选择',
   guardianReturnToCompare: '返回比较',
   officialProductSource: '查看品牌官方资料',
@@ -48,6 +54,12 @@ Object.assign(messages.zh, {
 });
 
 Object.assign(messages.en, {
+  requiredField: 'Required',
+  optionalField: 'Optional',
+  purchaseNeeds: 'Purchase needs',
+  purchaseNeedsPlaceholder: 'For example: headphones for commuting, with noise cancellation and a comfortable fit, within ¥500.',
+  purchaseNeedsHint: 'Describe exactly what you want to buy. You can include your use case, budget, and preferences.',
+  purchaseNeedsRequired: 'Please describe exactly what you want to buy',
   guardianExposureNote: 'Browser-reported visible simulation; no evidence of an effect on your choice',
   guardianReturnToCompare: 'Return to comparison',
   officialProductSource: 'View official product information',
@@ -135,7 +147,8 @@ const englishApiErrors = {
   '购物车为空': 'Your cart is empty',
   '商品数量必须是 1–99 的整数': 'Quantity must be an integer from 1 to 99',
   '请填写购买信息': 'Please enter purchase details',
-  '姓名、联系电话和地址均不能为空': 'Name, phone number, and address are required',
+  '姓名不能为空': 'Name is required',
+  '请填写购买需求，具体说明自己想买什么': 'Please describe exactly what you want to buy',
   '购买信息长度超出限制': 'Purchase details exceed the length limit',
   '需求长度应为 1–800 字': 'Your requirements must be 1–800 characters long',
   '问题长度应为 1–800 字': 'Your question must be 1–800 characters long',

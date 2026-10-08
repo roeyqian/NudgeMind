@@ -72,6 +72,8 @@ function validateAddress(value) {
   const name = String(value.name || '').trim();
   const phone = String(value.phone || '').trim();
   const address = String(value.address || '').trim();
-  if (!name || !phone || !address) throw { status: 400, message: '姓名、联系电话和地址均不能为空' };
-  if (name.length > 50 || phone.length > 30 || address.length > 200) throw { status: 400, message: '购买信息长度超出限制' };
+  const purchaseNeeds = typeof value.purchaseNeeds === 'string' ? value.purchaseNeeds.trim() : '';
+  if (!name) throw { status: 400, message: '姓名不能为空' };
+  if (!purchaseNeeds) throw { status: 400, message: '请填写购买需求，具体说明自己想买什么' };
+  if (name.length > 50 || phone.length > 30 || address.length > 200 || purchaseNeeds.length > 800) throw { status: 400, message: '购买信息长度超出限制' };
 }

@@ -72,7 +72,7 @@ const checkoutGuardian = ref(null);
 const checkoutStage = ref('details');
 const checkoutRemovalBusy = ref('');
 const checkoutClearBusy = ref(false);
-const checkoutForm = reactive({ name: '', phone: '', address: '' });
+const checkoutForm = reactive({ name: '', phone: '', address: '', purchaseNeeds: '' });
 const cartOfferProduct = ref(null);
 const cartOfferBusy = ref(false);
 
@@ -469,6 +469,10 @@ function closeCheckout() {
 
 async function requestCheckoutGuardian() {
   if (checkoutGuardianBusy.value) return;
+  if (!checkoutForm.purchaseNeeds.trim()) {
+    notify(t('purchaseNeedsRequired'), 'error');
+    return;
+  }
   checkoutGuardianBusy.value = true;
   try {
     await flushExposures();
@@ -1008,8 +1012,10 @@ onUnmounted(() => {
         <button class="modal-close" type="button" :aria-label="t('close')" @click="closeCheckout"><X /></button>
         <p class="eyebrow dark">{{ t('simulatedPurchase') }}</p><h2>{{ t('confirmInfo') }}</h2><p class="muted">{{ t('orderInfoOnly') }}</p>
         <label><span>{{ t('name') }}</span><input v-model.trim="checkoutForm.name" required maxlength="50" /></label>
-        <label><span>{{ t('phone') }}</span><input v-model.trim="checkoutForm.phone" required maxlength="30" :placeholder="t('researchInfo')" /></label>
-        <label><span>{{ t('address') }}</span><textarea v-model.trim="checkoutForm.address" required maxlength="200" rows="3" :placeholder="t('researchInfo')"></textarea></label>
+        <label><span>{{ t('purchaseNeeds') }}（{{ t('requiredField') }}）</span><textarea v-model.trim="checkoutForm.purchaseNeeds" required maxlength="800" rows="3" :placeholder="t('purchaseNeedsPlaceholder')" aria-describedby="purchase-needs-hint"></textarea></label>
+        <p id="purchase-needs-hint" class="muted">{{ t('purchaseNeedsHint') }}</p>
+        <label><span>{{ t('phone') }}（{{ t('optionalField') }}）</span><input v-model.trim="checkoutForm.phone" maxlength="30" :placeholder="t('researchInfo')" /></label>
+        <label><span>{{ t('address') }}（{{ t('optionalField') }}）</span><textarea v-model.trim="checkoutForm.address" maxlength="200" rows="3" :placeholder="t('researchInfo')"></textarea></label>
         <div class="modal-total"><span>{{ t('paymentAmount') }}</span><strong>{{ t('currency') }}{{ money(cartTotal) }}</strong></div>
         <button class="primary-button full" :disabled="checkoutGuardianBusy"><LoaderCircle v-if="checkoutGuardianBusy" :size="18" class="spin" />{{ checkoutGuardianBusy ? t('guardianReviewing') : t('confirmPurchase') }}</button>
       </form>
